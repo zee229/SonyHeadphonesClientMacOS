@@ -669,40 +669,35 @@ void DrawDeviceControlsHeader()
                 if (supportSingle && !supportLR && gDevice.mBatteryL.threshold)
                 {
                     ImGui::TableNextRow();
-                    float single = gDevice.mBatteryL.level;
-                    single /= gDevice.mBatteryL.threshold;
+                    Uint32 single = gDevice.mBatteryL.level;
                     ImGui::TableSetColumnIndex(0);
-                    ImGui::Text("Battery: %.0f%%", single * 100);
+                    ImGui::Text("Battery: %.0d%%", single);
                     ImGui::TableSetColumnIndex(1);
-                    ImGui::ProgressBar(single, {-1, 0}, FormatEnum(gDevice.mBatteryL.charging));
+                    ImGui::ProgressBar(single / 100.0f, {-1, 0}, FormatEnum(gDevice.mBatteryL.charging));
                 }
                 if (supportLR && gDevice.mBatteryL.threshold && gDevice.mBatteryR.threshold)
                 {
-                    float single = gDevice.mBatteryL.level;
-                    single /= gDevice.mBatteryL.threshold;
+                    Uint32 single = gDevice.mBatteryL.level;
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
-                    ImGui::Text("L: %.0f%%", single * 100);
+                    ImGui::Text("L: %.0d%%", single);
                     ImGui::TableSetColumnIndex(1);
-                    ImGui::ProgressBar(single, {-1, 0}, FormatEnum(gDevice.mBatteryL.charging));
+                    ImGui::ProgressBar(single / 100.0f, {-1, 0}, FormatEnum(gDevice.mBatteryL.charging));
                     single = gDevice.mBatteryR.level;
-                    single /= gDevice.mBatteryR.threshold;
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
-                    ImGui::Text("R: %.0f%%", single * 100);
+                    ImGui::Text("R: %.0d%%", single);
                     ImGui::TableSetColumnIndex(1);
-                    ImGui::ProgressBar(single, {-1, 0}, FormatEnum(gDevice.mBatteryR.charging));
+                    ImGui::ProgressBar(single / 100.0f, {-1, 0}, FormatEnum(gDevice.mBatteryR.charging));
                 }
                 if (supportCase && gDevice.mBatteryCase.threshold)
                 {
-                    float single = gDevice.mBatteryCase.level;
-                    single /= 100.0f; // gDevice.mBatteryCase.threshold <-- Wonky. Got threshold=30 and value=76 pairs
-                    // Seems like 100.0f is always the case for...case
+                    Uint32 single = gDevice.mBatteryCase.level;
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
-                    ImGui::Text("Case: %.0f%%", single * 100);
+                    ImGui::Text("Case: %.0d%%", single);
                     ImGui::TableSetColumnIndex(1);
-                    ImGui::ProgressBar(single, {-1, 0}, FormatEnum(gDevice.mBatteryCase.charging));
+                    ImGui::ProgressBar(single / 100.0f, {-1, 0}, FormatEnum(gDevice.mBatteryCase.charging));
                 }
                 ImGui::EndTable();
             }
