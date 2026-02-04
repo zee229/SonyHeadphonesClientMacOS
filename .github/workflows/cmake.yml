@@ -36,7 +36,7 @@ jobs:
           #   gcc: 14
           - os: macos-latest
             arch: universal
-            binary_path: build/client/SonyHeadphonesClient.app
+            binary_path: build/client/SonyHeadphonesClient.zip
             artifact_name: "SonyHeadphonesClient-macos-universal"
             script: ""
           - os: windows-latest
@@ -94,6 +94,11 @@ jobs:
       working-directory: ${{github.workspace}}
       # Strip symbols from the binary to reduce size
       run: strip --strip-unneeded ${{matrix.binary_path}}
+
+    - name: Pack (macOS)
+      if: runner.os == 'macOS'
+      working-directory: ${{github.workspace}}/build/client
+      run: zip -r SonyHeadphonesClient.zip SonyHeadphonesClient.app
 
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v4
