@@ -9,6 +9,11 @@ if (MDR_PLATFORM_OS STREQUAL "WIN32")
         add_executable(SonyHeadphonesClient WIN32)
     endif()
     target_sources(SonyHeadphonesClient PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Platform/Windows/app.manifest")
+elseif (MDR_PLATFORM_OS STREQUAL "MACOS")
+    add_executable(SonyHeadphonesClient MACOSX_BUNDLE)
+    set_target_properties(SonyHeadphonesClient PROPERTIES
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Platform/MacOS/Info.plist"
+    )
 else ()
     add_executable(SonyHeadphonesClient)
 endif ()

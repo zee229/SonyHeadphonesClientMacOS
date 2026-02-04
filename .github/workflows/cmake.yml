@@ -36,7 +36,7 @@ jobs:
           #   gcc: 14
           - os: macos-latest
             arch: universal
-            binary_path: build/client/SonyHeadphonesClient
+            binary_path: build/client/SonyHeadphonesClient.app
             artifact_name: "SonyHeadphonesClient-macos-universal"
             script: ""
           - os: windows-latest
