@@ -111,7 +111,6 @@ namespace mdr
 
         /* Pairing Management */
         constexpr MessageMdrV2FunctionType_Table2 kPairingFunctions[] = {
-            MessageMdrV2FunctionType_Table2::PAIRING_DEVICE_MANAGEMENT_CLASSIC_BT,
             MessageMdrV2FunctionType_Table2::PAIRING_DEVICE_MANAGEMENT_WITH_BLUETOOTH_CLASS_OF_DEVICE_CLASSIC_BT,
             MessageMdrV2FunctionType_Table2::PAIRING_DEVICE_MANAGEMENT_WITH_BLUETOOTH_CLASS_OF_DEVICE_CLASSIC_LE
         };
@@ -127,6 +126,21 @@ namespace mdr
             SendCommandACK(t2::PeripheralGetParam,
                            {.type = t2::PeripheralInquiredType::
                            PAIRING_DEVICE_MANAGEMENT_WITH_BLUETOOTH_CLASS_OF_DEVICE
+                           });
+        }
+        
+        if (mSupport.contains(MessageMdrV2FunctionType_Table2::PAIRING_DEVICE_MANAGEMENT_CLASSIC_BT))
+        {
+            /* Pairing Mode */
+            SendCommandACK(t2::PeripheralGetStatus,
+                           {.type = t2::PeripheralInquiredType::
+                           PAIRING_DEVICE_MANAGEMENT_CLASSIC_BT
+                           });
+
+            /* Connected Devices */
+            SendCommandACK(t2::PeripheralGetParam,
+                           {.type = t2::PeripheralInquiredType::
+                           PAIRING_DEVICE_MANAGEMENT_CLASSIC_BT
                            });
         }
 
@@ -383,11 +397,7 @@ namespace mdr
         {
             using namespace t2;
             PeripheralInquiredType type = PeripheralInquiredType::PAIRING_DEVICE_MANAGEMENT_CLASSIC_BT;
-            if (mSupport.contains(MessageMdrV2FunctionType_Table2::PAIRING_DEVICE_MANAGEMENT_CLASSIC_BT))
-            {
-                type = PeripheralInquiredType::PAIRING_DEVICE_MANAGEMENT_CLASSIC_BT;
-            }
-            else if (
+            if (
                 mSupport.contains(
                     MessageMdrV2FunctionType_Table2::PAIRING_DEVICE_MANAGEMENT_WITH_BLUETOOTH_CLASS_OF_DEVICE_CLASSIC_BT)
                 ||
@@ -396,7 +406,12 @@ namespace mdr
             )
             {
                 type = PeripheralInquiredType::PAIRING_DEVICE_MANAGEMENT_WITH_BLUETOOTH_CLASS_OF_DEVICE;
-            } else
+            }
+            else if (mSupport.contains(MessageMdrV2FunctionType_Table2::PAIRING_DEVICE_MANAGEMENT_CLASSIC_BT))
+            {
+                type = PeripheralInquiredType::PAIRING_DEVICE_MANAGEMENT_CLASSIC_BT;
+            }
+            else
             {
                 // Unsupported. Ignore the rest.
                 mPairedDeviceConnectMac.overwrite("");
@@ -427,21 +442,22 @@ namespace mdr
                 mPairedDeviceUnpairMac.overwrite("");
                 SendCommandACK(PeripheralSetExtendedParamParingDeviceManagementCommon, res);
             }
-        }
+        
 
-        /* Pairing Mode */
-        if (mPairingMode.dirty())
-        {
-            using namespace t2;
-            PeripheralStatusPairingDeviceManagementCommon res;
-            res.base.command = Command::PERI_SET_STATUS;
-            res.base.type = PeripheralInquiredType::PAIRING_DEVICE_MANAGEMENT_WITH_BLUETOOTH_CLASS_OF_DEVICE;
-            res.btMode = mPairingMode.desired
-                ? PeripheralBluetoothMode::INQUIRY_SCAN_MODE
-                : PeripheralBluetoothMode::NORMAL_MODE;
-            res.enableDisableStatus = MessageMdrV2EnableDisable::ENABLE;
-            SendCommandACK(PeripheralStatusPairingDeviceManagementCommon, res);
-            mPairingMode.commit();
+            /* Pairing Mode */
+            if (mPairingMode.dirty())
+            {
+                using namespace t2;
+                PeripheralStatusPairingDeviceManagementCommon res;
+                res.base.command = Command::PERI_SET_STATUS;
+                res.base.type = type;
+                res.btMode = mPairingMode.desired
+                    ? PeripheralBluetoothMode::INQUIRY_SCAN_MODE
+                    : PeripheralBluetoothMode::NORMAL_MODE;
+                res.enableDisableStatus = MessageMdrV2EnableDisable::ENABLE;
+                SendCommandACK(PeripheralStatusPairingDeviceManagementCommon, res);
+                mPairingMode.commit();
+            }
         }
 
         /* STC */
