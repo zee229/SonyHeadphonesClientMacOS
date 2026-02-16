@@ -22,7 +22,7 @@ jobs:
             arch: x64
             binary_path: build/client/SonyHeadphonesClient
             artifact_name: "SonyHeadphonesClient-linux-x64"
-            script: "sudo apt-get update && sudo apt-get install -y libbluetooth-dev libdbus-1-dev libwayland-dev libxkbcommon-dev wayland-protocols extra-cmake-modules xorg-dev llvm-18-dev libclang-18-dev libcurl4-openssl-dev"
+            script: "sudo apt-get update && sudo apt-get install -y libbluetooth-dev libdbus-1-dev libwayland-dev libxkbcommon-dev wayland-protocols extra-cmake-modules xorg-dev llvm-17-dev libclang-17-dev libcurl4-openssl-dev"
             gcc: 14
           # ARM Linux runners currently has availablity issues.
           # TODO: Enable these once these are fixed.
@@ -32,7 +32,7 @@ jobs:
           #   arch: arm64
           #   binary_path: build/client/SonyHeadphonesClient
           #   artifact_name: "SonyHeadphonesClient-linux-arm64"
-          #   script: "sudo apt-get update && sudo apt-get install -y libbluetooth-dev libdbus-1-dev libwayland-dev libxkbcommon-dev wayland-protocols extra-cmake-modules xorg-dev llvm-18-dev libclang-18-dev libcurl4-openssl-dev"
+          #   script: "sudo apt-get update && sudo apt-get install -y libbluetooth-dev libdbus-1-dev libwayland-dev libxkbcommon-dev wayland-protocols extra-cmake-modules xorg-dev llvm-17-dev libclang-17-dev libcurl4-openssl-dev"
           #   gcc: 14
           - os: macos-latest
             arch: universal
