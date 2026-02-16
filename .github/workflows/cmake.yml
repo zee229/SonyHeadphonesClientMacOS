@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-24.04
+          - os: ubuntu-latest
             arch: x64
             binary_path: build/client/SonyHeadphonesClient
             artifact_name: "SonyHeadphonesClient-linux-x64"
