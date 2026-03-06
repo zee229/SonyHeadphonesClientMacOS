@@ -1,4 +1,5 @@
 import SwiftUI
+import ServiceManagement
 
 enum AppTheme: Int, CaseIterable {
     case system = 0
@@ -26,13 +27,14 @@ enum AppTheme: Int, CaseIterable {
 struct SonyHeadphonesClientApp: App {
     @StateObject private var manager = HeadphonesManager()
     @AppStorage("appTheme") private var appTheme: Int = 0
+    @AppStorage("menuBarEnabled") private var menuBarEnabled: Bool = true
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(manager)
                 .frame(minWidth: 400, minHeight: 500)
-                .onAppear { applyTheme() }
+                .onAppear { applyTheme(); registerLaunchAtLoginIfNeeded() }
                 .onChange(of: appTheme) { _, _ in applyTheme() }
         }
         .windowResizability(.contentSize)
@@ -43,7 +45,7 @@ struct SonyHeadphonesClientApp: App {
                 .fixedSize()
         }
 
-        MenuBarExtra {
+        MenuBarExtra(isInserted: $menuBarEnabled) {
             MenuBarPopoverView()
                 .environmentObject(manager)
         } label: {
@@ -55,10 +57,18 @@ struct SonyHeadphonesClientApp: App {
     private func applyTheme() {
         NSApp.appearance = AppTheme(rawValue: appTheme)?.nsAppearance
     }
+
+    private func registerLaunchAtLoginIfNeeded() {
+        if !UserDefaults.standard.bool(forKey: "didSetupLaunchAtLogin") {
+            UserDefaults.standard.set(true, forKey: "didSetupLaunchAtLogin")
+            try? SMAppService.mainApp.register()
+        }
+    }
 }
 
 struct MenuBarLabel: View {
     @ObservedObject var manager: HeadphonesManager
+    @AppStorage("menuBarIconStyle") private var iconStyle: Int = 1
 
     private var batteryText: String? {
         guard manager.connectionState == .connected else { return nil }
@@ -69,8 +79,10 @@ struct MenuBarLabel: View {
 
     var body: some View {
         HStack(spacing: 2) {
-            Image(systemName: "headphones")
-            if let text = batteryText {
+            if iconStyle != 2 {
+                Image(systemName: "headphones")
+            }
+            if iconStyle != 0, let text = batteryText {
                 Text(text)
             }
         }

@@ -3,6 +3,10 @@ import SwiftUI
 struct MenuBarPopoverView: View {
     @EnvironmentObject var manager: HeadphonesManager
     @StateObject private var nowPlaying = NowPlayingMonitor()
+    @AppStorage("menuBarShowBatterySection") private var showBattery: Bool = true
+    @AppStorage("menuBarShowNCSection") private var showNC: Bool = true
+    @AppStorage("menuBarShowPlaybackSection") private var showPlayback: Bool = true
+    @AppStorage("menuBarShowVolumeControl") private var showVolume: Bool = true
 
     private var trackTitle: String {
         !manager.playTrackTitle.isEmpty ? manager.playTrackTitle : nowPlaying.title
@@ -64,19 +68,21 @@ struct MenuBarPopoverView: View {
         .padding(.bottom, 4)
 
         // Battery
-        batterySection
-
-        Divider()
-            .padding(.vertical, 4)
+        if showBattery {
+            batterySection
+        }
 
         // NC/Ambient mode
-        ncSection
-
-        Divider()
-            .padding(.vertical, 4)
+        if showNC {
+            if showBattery { Divider().padding(.vertical, 4) }
+            ncSection
+        }
 
         // Playback
-        playbackSection
+        if showPlayback {
+            if showBattery || showNC { Divider().padding(.vertical, 4) }
+            playbackSection
+        }
     }
 
     // MARK: - Battery
@@ -239,24 +245,26 @@ struct MenuBarPopoverView: View {
                 }
                 .buttonStyle(.plain)
 
-                Spacer()
+                if showVolume {
+                    Spacer()
 
-                HStack(spacing: 4) {
-                    Image(systemName: "speaker.fill")
-                        .font(.system(size: 8))
-                        .foregroundColor(.secondary)
-                    Slider(
-                        value: Binding(
-                            get: { Double(manager.playVolume) },
-                            set: { manager.playVolume = Int32($0) }
-                        ),
-                        in: 0...30,
-                        step: 1
-                    )
-                    .frame(width: 70)
-                    Image(systemName: "speaker.wave.3.fill")
-                        .font(.system(size: 8))
-                        .foregroundColor(.secondary)
+                    HStack(spacing: 4) {
+                        Image(systemName: "speaker.fill")
+                            .font(.system(size: 8))
+                            .foregroundColor(.secondary)
+                        Slider(
+                            value: Binding(
+                                get: { Double(manager.playVolume) },
+                                set: { manager.playVolume = Int32($0) }
+                            ),
+                            in: 0...30,
+                            step: 1
+                        )
+                        .frame(width: 70)
+                        Image(systemName: "speaker.wave.3.fill")
+                            .font(.system(size: 8))
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
         }
@@ -290,6 +298,13 @@ struct MenuBarPopoverView: View {
             }
             .font(.caption)
 
+            Button {
+                openSettingsWindow()
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.caption)
+            }
+
             Spacer()
 
             if isConnected {
@@ -309,6 +324,11 @@ struct MenuBarPopoverView: View {
         .buttonStyle(.plain)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+
+    private func openSettingsWindow() {
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
     }
 
     private func openMainWindow() {

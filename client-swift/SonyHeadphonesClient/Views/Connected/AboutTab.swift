@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreBluetooth
+import ServiceManagement
 
 struct AboutTab: View {
     @EnvironmentObject var manager: HeadphonesManager
@@ -56,6 +57,12 @@ struct AboutTab: View {
 struct AppSettingsView: View {
     @AppStorage("appTheme") private var appTheme: Int = 0
     @AppStorage("alwaysOnTop") private var alwaysOnTop: Bool = false
+    @AppStorage("menuBarEnabled") private var menuBarEnabled: Bool = true
+    @AppStorage("menuBarIconStyle") private var menuBarIconStyle: Int = 1
+    @AppStorage("menuBarShowBatterySection") private var showBattery: Bool = true
+    @AppStorage("menuBarShowNCSection") private var showNC: Bool = true
+    @AppStorage("menuBarShowPlaybackSection") private var showPlayback: Bool = true
+    @AppStorage("menuBarShowVolumeControl") private var showVolume: Bool = true
 
     private var bluetoothStatus: (String, Color) {
         switch CBCentralManager.authorization {
@@ -101,6 +108,90 @@ struct AppSettingsView: View {
                 }
                 .onChange(of: alwaysOnTop) { _, newValue in
                     setWindowLevel(alwaysOnTop: newValue)
+                }
+            }
+
+            // Menu Bar
+            SoundCard {
+                Label("Menu Bar", systemImage: "menubar.rectangle")
+                    .font(.headline)
+
+                HStack {
+                    Text("Show in Menu Bar")
+                        .font(.subheadline)
+                    Spacer()
+                    Toggle("", isOn: $menuBarEnabled)
+                        .labelsHidden()
+                }
+
+                if menuBarEnabled {
+                    Divider()
+
+                    Picker("Icon Style", selection: $menuBarIconStyle) {
+                        Text("Icon Only").tag(0)
+                        Text("Icon + Battery").tag(1)
+                        Text("Battery Only").tag(2)
+                    }
+                    .font(.subheadline)
+
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Popover Sections")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+
+                    HStack {
+                        Text("Battery")
+                            .font(.subheadline)
+                        Spacer()
+                        Toggle("", isOn: $showBattery)
+                            .labelsHidden()
+                    }
+
+                    HStack {
+                        Text("Sound Mode")
+                            .font(.subheadline)
+                        Spacer()
+                        Toggle("", isOn: $showNC)
+                            .labelsHidden()
+                    }
+
+                    HStack {
+                        Text("Playback")
+                            .font(.subheadline)
+                        Spacer()
+                        Toggle("", isOn: $showPlayback)
+                            .labelsHidden()
+                    }
+
+                    HStack {
+                        Text("Volume")
+                            .font(.subheadline)
+                        Spacer()
+                        Toggle("", isOn: $showVolume)
+                            .labelsHidden()
+                    }
+
+                    Divider()
+
+                    HStack {
+                        Text("Launch at Login")
+                            .font(.subheadline)
+                        Spacer()
+                        Toggle("", isOn: Binding(
+                            get: { SMAppService.mainApp.status == .enabled },
+                            set: { newValue in
+                                if newValue {
+                                    try? SMAppService.mainApp.register()
+                                } else {
+                                    try? SMAppService.mainApp.unregister()
+                                }
+                            }
+                        ))
+                        .labelsHidden()
+                    }
                 }
             }
 
