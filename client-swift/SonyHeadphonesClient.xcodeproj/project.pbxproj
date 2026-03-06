@@ -1,0 +1,430 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A1000001 /* SonyHeadphonesClientApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000001; };
+		A1000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000002; };
+		A1000003 /* HeadphonesManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000003; };
+		A1000004 /* DeviceState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000004; };
+		A1000005 /* MDREnums.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000005; };
+		A1000006 /* DiscoveryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000006; };
+		A1000007 /* ConnectingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000007; };
+		A1000008 /* ConnectedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000008; };
+		A1000009 /* HeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000009; };
+		A100000A /* PlaybackTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000A; };
+		A100000B /* SoundTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000B; };
+		A100000C /* DevicesTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000C; };
+		A100000D /* SystemTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000D; };
+		A100000E /* AboutTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000E; };
+		A100000F /* DisconnectedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000F; };
+		A1000010 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B1000010; };
+		A1000020 /* libmdr.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B1000020; };
+		A1000021 /* libfmt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B1000021; };
+		A1000022 /* libmdr_PlatformMacOS.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B1000022; };
+		A1000023 /* IOBluetooth.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B1000023; };
+		A1000024 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B1000024; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		B1000001 /* SonyHeadphonesClientApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SonyHeadphonesClientApp.swift; sourceTree = "<group>"; };
+		B1000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		B1000003 /* HeadphonesManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeadphonesManager.swift; sourceTree = "<group>"; };
+		B1000004 /* DeviceState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceState.swift; sourceTree = "<group>"; };
+		B1000005 /* MDREnums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MDREnums.swift; sourceTree = "<group>"; };
+		B1000006 /* DiscoveryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoveryView.swift; sourceTree = "<group>"; };
+		B1000007 /* ConnectingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectingView.swift; sourceTree = "<group>"; };
+		B1000008 /* ConnectedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectedView.swift; sourceTree = "<group>"; };
+		B1000009 /* HeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderView.swift; sourceTree = "<group>"; };
+		B100000A /* PlaybackTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackTab.swift; sourceTree = "<group>"; };
+		B100000B /* SoundTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SoundTab.swift; sourceTree = "<group>"; };
+		B100000C /* DevicesTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicesTab.swift; sourceTree = "<group>"; };
+		B100000D /* SystemTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemTab.swift; sourceTree = "<group>"; };
+		B100000E /* AboutTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutTab.swift; sourceTree = "<group>"; };
+		B100000F /* DisconnectedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisconnectedView.swift; sourceTree = "<group>"; };
+		B1000010 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		B1000011 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B1000012 /* SonyHeadphonesClient-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "SonyHeadphonesClient-Bridging-Header.h"; sourceTree = "<group>"; };
+		B1000020 /* libmdr.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libmdr.a; path = ../build/libmdr/src/libmdr.a; sourceTree = "<group>"; };
+		B1000021 /* libfmt.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libfmt.a; path = ../build/_deps/fmt-build/libfmt.a; sourceTree = "<group>"; };
+		B1000022 /* libmdr_PlatformMacOS.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libmdr_PlatformMacOS.a; path = ../build/libmdr/src/Platform/MacOS/libmdr_PlatformMacOS.a; sourceTree = "<group>"; };
+		B1000023 /* IOBluetooth.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOBluetooth.framework; path = System/Library/Frameworks/IOBluetooth.framework; sourceTree = SDKROOT; };
+		B1000024 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		B1000099 /* SonyHeadphonesClient.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SonyHeadphonesClient.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C1000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000020 /* libmdr.a in Frameworks */,
+				A1000021 /* libfmt.a in Frameworks */,
+				A1000022 /* libmdr_PlatformMacOS.a in Frameworks */,
+				A1000023 /* IOBluetooth.framework in Frameworks */,
+				A1000024 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D1000001 /* Root */ = {
+			isa = PBXGroup;
+			children = (
+				D1000002 /* SonyHeadphonesClient */,
+				D100000F /* Frameworks */,
+				D1000010 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		D1000002 /* SonyHeadphonesClient */ = {
+			isa = PBXGroup;
+			children = (
+				D1000003 /* App */,
+				D1000004 /* Bridge */,
+				D1000005 /* Models */,
+				D1000006 /* Views */,
+				D100000E /* Resources */,
+			);
+			path = SonyHeadphonesClient;
+			sourceTree = "<group>";
+		};
+		D1000003 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				B1000001 /* SonyHeadphonesClientApp.swift */,
+				B1000002 /* ContentView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		D1000004 /* Bridge */ = {
+			isa = PBXGroup;
+			children = (
+				B1000012 /* SonyHeadphonesClient-Bridging-Header.h */,
+			);
+			path = Bridge;
+			sourceTree = "<group>";
+		};
+		D1000005 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				B1000003 /* HeadphonesManager.swift */,
+				B1000004 /* DeviceState.swift */,
+				B1000005 /* MDREnums.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		D1000006 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				D1000007 /* Discovery */,
+				D1000008 /* Connecting */,
+				D1000009 /* Connected */,
+				D100000D /* Disconnected */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		D1000007 /* Discovery */ = {
+			isa = PBXGroup;
+			children = (
+				B1000006 /* DiscoveryView.swift */,
+			);
+			path = Discovery;
+			sourceTree = "<group>";
+		};
+		D1000008 /* Connecting */ = {
+			isa = PBXGroup;
+			children = (
+				B1000007 /* ConnectingView.swift */,
+			);
+			path = Connecting;
+			sourceTree = "<group>";
+		};
+		D1000009 /* Connected */ = {
+			isa = PBXGroup;
+			children = (
+				B1000008 /* ConnectedView.swift */,
+				B1000009 /* HeaderView.swift */,
+				B100000A /* PlaybackTab.swift */,
+				B100000B /* SoundTab.swift */,
+				B100000C /* DevicesTab.swift */,
+				B100000D /* SystemTab.swift */,
+				B100000E /* AboutTab.swift */,
+			);
+			path = Connected;
+			sourceTree = "<group>";
+		};
+		D100000D /* Disconnected */ = {
+			isa = PBXGroup;
+			children = (
+				B100000F /* DisconnectedView.swift */,
+			);
+			path = Disconnected;
+			sourceTree = "<group>";
+		};
+		D100000E /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				B1000010 /* Assets.xcassets */,
+				B1000011 /* Info.plist */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		D100000F /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				B1000020 /* libmdr.a */,
+				B1000021 /* libfmt.a */,
+				B1000022 /* libmdr_PlatformMacOS.a */,
+				B1000023 /* IOBluetooth.framework */,
+				B1000024 /* Foundation.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		D1000010 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B1000099 /* SonyHeadphonesClient.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		E1000001 /* SonyHeadphonesClient */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F1000002 /* Build configuration list for PBXNativeTarget "SonyHeadphonesClient" */;
+			buildPhases = (
+				E1000010 /* Build libmdr */,
+				E1000002 /* Sources */,
+				C1000001 /* Frameworks */,
+				E1000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SonyHeadphonesClient;
+			productName = SonyHeadphonesClient;
+			productReference = B1000099 /* SonyHeadphonesClient.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E1000000 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1540;
+				LastUpgradeCheck = 1540;
+			};
+			buildConfigurationList = F1000001 /* Build configuration list for PBXProject "SonyHeadphonesClient" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = D1000001 /* Root */;
+			productRefGroup = D1000010 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				E1000001 /* SonyHeadphonesClient */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		E1000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000010 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		E1000010 /* Build libmdr */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Build libmdr";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "cd \"$PROJECT_DIR/..\"\nmkdir -p build\ncd build\ncmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo 2>&1\ncmake --build . --target mdr mdr_PlatformMacOS 2>&1\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		E1000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000001 /* SonyHeadphonesClientApp.swift in Sources */,
+				A1000002 /* ContentView.swift in Sources */,
+				A1000003 /* HeadphonesManager.swift in Sources */,
+				A1000004 /* DeviceState.swift in Sources */,
+				A1000005 /* MDREnums.swift in Sources */,
+				A1000006 /* DiscoveryView.swift in Sources */,
+				A1000007 /* ConnectingView.swift in Sources */,
+				A1000008 /* ConnectedView.swift in Sources */,
+				A1000009 /* HeaderView.swift in Sources */,
+				A100000A /* PlaybackTab.swift in Sources */,
+				A100000B /* SoundTab.swift in Sources */,
+				A100000C /* DevicesTab.swift in Sources */,
+				A100000D /* SystemTab.swift in Sources */,
+				A100000E /* AboutTab.swift in Sources */,
+				A100000F /* DisconnectedView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		G1000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		G1000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		G1000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SonyHeadphonesClient/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/../build/libmdr/src",
+					"$(PROJECT_DIR)/../build/_deps/fmt-build",
+					"$(PROJECT_DIR)/../build/libmdr/src/Platform/MacOS",
+				);
+				MARKETING_VERSION = 2.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mos9527.SonyHeadphonesClient;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "SonyHeadphonesClient/Bridge/SonyHeadphonesClient-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/../libmdr/include",
+				);
+				OTHER_LDFLAGS = (
+					"-lstdc++",
+				);
+			};
+			name = Debug;
+		};
+		G1000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SonyHeadphonesClient/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/../build/libmdr/src",
+					"$(PROJECT_DIR)/../build/_deps/fmt-build",
+					"$(PROJECT_DIR)/../build/libmdr/src/Platform/MacOS",
+				);
+				MARKETING_VERSION = 2.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.mos9527.SonyHeadphonesClient;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = "SonyHeadphonesClient/Bridge/SonyHeadphonesClient-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+				HEADER_SEARCH_PATHS = (
+					"$(PROJECT_DIR)/../libmdr/include",
+				);
+				OTHER_LDFLAGS = (
+					"-lstdc++",
+				);
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F1000001 /* Build configuration list for PBXProject "SonyHeadphonesClient" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				G1000001 /* Debug */,
+				G1000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F1000002 /* Build configuration list for PBXNativeTarget "SonyHeadphonesClient" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				G1000003 /* Debug */,
+				G1000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = E1000000 /* Project object */;
+}

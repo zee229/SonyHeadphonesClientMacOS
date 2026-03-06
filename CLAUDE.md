@@ -4,15 +4,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-SonyHeadphonesClient is a macOS-only client for Sony headphones using the MDR (Mobile Device Receiver) protocol. It consists of two main components: `libmdr` (protocol library) and `client` (GUI application).
+SonyHeadphonesClient is a macOS-only client for Sony headphones using the MDR (Mobile Device Receiver) protocol. It consists of three main components: `libmdr` (protocol library), `client/` (legacy SDL3+ImGui GUI), and `client-swift/` (native SwiftUI GUI).
 
 ## Build Commands
 
 ```bash
-# Standard build
-mkdir build && cd build
+# Build libmdr (required before SwiftUI app)
+mkdir -p build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build . --target mdr mdr_PlatformMacOS
+
+# Build legacy SDL3+ImGui client
 cmake --build . --target SonyHeadphonesClient
+
+# Build SwiftUI client (requires Xcode)
+# 1. First build libmdr above
+# 2. Open client-swift/SonyHeadphonesClient.xcodeproj in Xcode
+# 3. Build and run (Cmd+R)
+# The Xcode project has a pre-build script that also builds libmdr.
 
 # Universal binary (arm64 + x86_64)
 cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
@@ -38,7 +47,18 @@ There are no tests in this project.
   - `include/mdr/Generated/` — Auto-generated enum converters, traits
   - `src/Generated/` — Auto-generated serialization and validation code
 
-- **`client/`** — GUI application using SDL3 + Dear ImGui. Single main UI file `Client.cpp` (~52K). Entry point in `SDLMain.cpp`.
+- **`client/`** — Legacy GUI application using SDL3 + Dear ImGui. Single main UI file `Client.cpp` (~52K). Entry point in `SDLMain.cpp`.
+
+- **`client-swift/`** — Native SwiftUI GUI application. Xcode project at `SonyHeadphonesClient.xcodeproj`. Uses a bridging header to call the C API from `libmdr`. Key files:
+  - `App/SonyHeadphonesClientApp.swift` — `@main` entry point, `WindowGroup`
+  - `App/ContentView.swift` — State-machine router based on connection state
+  - `Models/HeadphonesManager.swift` — Central `@MainActor ObservableObject` with 60Hz poll loop
+  - `Models/MDREnums.swift` — Swift enums mirroring C++ protocol enums
+  - `Models/DeviceState.swift` — Swift value types for connection/battery/device state
+  - `Views/` — SwiftUI views organized by connection state (Discovery, Connecting, Connected, Disconnected)
+  - `Bridge/SonyHeadphonesClient-Bridging-Header.h` — Imports all C API headers
+
+- **`libmdr/include/mdr-c/HeadphonesAccess.h`** — C shim layer exposing all `MDRProperty` fields as C getter/setter functions. Used by the SwiftUI client via bridging header. Implementation in `libmdr/src/HeadphonesAccess.cpp`.
 
 ### Platform abstraction
 
@@ -72,7 +92,9 @@ Payload structs in `libmdr`:
 
 ## UI Theme
 
-The app uses a custom macOS Sequoia dark mode theme defined in `SetupMacOSStyle()` in `SDLMain.cpp`. Accent color is macOS system blue `#0A84FF`. The SDL clear color (`30,30,30,255`) matches `WindowBg` to prevent gray bar artifacts. Battery progress bars use context-sensitive colors (green/orange/red). Primary action buttons (Connect, Play/Pause) use accent blue push/pop overrides.
+**SwiftUI client** (`client-swift/`): Uses native macOS dark mode with system accent color. Battery progress bars use context-sensitive colors (green/orange/red). The SwiftUI app uses `LSUIElement = YES` to be a menu-bar-less app (matching the original).
+
+**Legacy ImGui client** (`client/`): Uses a custom macOS Sequoia dark mode theme defined in `SetupMacOSStyle()` in `SDLMain.cpp`. Accent color is macOS system blue `#0A84FF`.
 
 ## Key Conventions
 
