@@ -6,14 +6,8 @@ struct PlaybackTab: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                // Now Playing area
+                // Controls
                 VStack(spacing: 16) {
-                    Image(systemName: manager.playPause == .play ? "music.note" : "pause.circle")
-                        .font(.system(size: 48, weight: .thin))
-                        .foregroundColor(.accentColor)
-                        .frame(height: 56)
-
-                    // Controls
                     HStack(spacing: 24) {
                         Button {
                             manager.sendPlaybackControl(.trackDown)
