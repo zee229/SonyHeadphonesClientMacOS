@@ -359,7 +359,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OBJC_BRIDGING_HEADER = "SonyHeadphonesClient/Bridge/SonyHeadphonesClient-Bridging-Header.h";
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/../libmdr/include",
 				);
@@ -392,7 +392,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_OBJC_BRIDGING_HEADER = "SonyHeadphonesClient/Bridge/SonyHeadphonesClient-Bridging-Header.h";
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/../libmdr/include",
 				);

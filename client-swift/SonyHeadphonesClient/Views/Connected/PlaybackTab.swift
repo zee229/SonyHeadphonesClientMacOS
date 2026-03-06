@@ -1,5 +1,20 @@
 import SwiftUI
 
+struct PlayButtonModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 26, *) {
+            content
+                .buttonStyle(.glass)
+                .buttonBorderShape(.circle)
+                .foregroundColor(.accentColor)
+        } else {
+            content
+                .buttonStyle(.plain)
+                .foregroundColor(.accentColor)
+        }
+    }
+}
+
 struct PlaybackTab: View {
     @EnvironmentObject var manager: HeadphonesManager
 
@@ -29,8 +44,7 @@ struct PlaybackTab: View {
                             Image(systemName: manager.playPause == .play ? "pause.circle.fill" : "play.circle.fill")
                                 .font(.system(size: 48))
                         }
-                        .buttonStyle(.plain)
-                        .foregroundColor(.accentColor)
+                        .modifier(PlayButtonModifier())
 
                         Button {
                             manager.sendPlaybackControl(.trackUp)

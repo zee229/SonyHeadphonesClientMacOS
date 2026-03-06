@@ -243,12 +243,24 @@ struct SoundCard<Content: View>: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
-        .cornerRadius(10)
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
-        )
+        .modifier(GlassCardModifier())
+    }
+}
+
+struct GlassCardModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 26, *) {
+            content
+                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
+        } else {
+            content
+                .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+                .cornerRadius(10)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
+                )
+        }
     }
 }
 
@@ -259,25 +271,46 @@ struct ModePill: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 5) {
-                Image(systemName: icon)
-                    .font(.caption)
-                Text(title)
-                    .font(.subheadline)
+        if #available(macOS 26, *) {
+            Button(action: action) {
+                HStack(spacing: 5) {
+                    Image(systemName: icon)
+                        .font(.caption)
+                    Text(title)
+                        .font(.subheadline)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .frame(maxWidth: .infinity)
+                .foregroundColor(isSelected ? .accentColor : .primary)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .frame(maxWidth: .infinity)
-            .background(isSelected ? Color.accentColor.opacity(0.2) : Color(nsColor: .controlBackgroundColor))
-            .foregroundColor(isSelected ? .accentColor : .secondary)
-            .cornerRadius(8)
+            .buttonStyle(.plain)
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(isSelected ? Color.accentColor.opacity(0.5) : Color(nsColor: .separatorColor), lineWidth: 1)
+                    .stroke(isSelected ? Color.accentColor.opacity(0.6) : Color.clear, lineWidth: 1.5)
             )
+        } else {
+            Button(action: action) {
+                HStack(spacing: 5) {
+                    Image(systemName: icon)
+                        .font(.caption)
+                    Text(title)
+                        .font(.subheadline)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .frame(maxWidth: .infinity)
+                .background(isSelected ? Color.accentColor.opacity(0.2) : Color(nsColor: .controlBackgroundColor))
+                .foregroundColor(isSelected ? .accentColor : .secondary)
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(isSelected ? Color.accentColor.opacity(0.5) : Color(nsColor: .separatorColor), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
     }
 }
 

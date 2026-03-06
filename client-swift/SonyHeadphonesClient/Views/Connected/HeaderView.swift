@@ -110,10 +110,22 @@ struct BadgeView: View {
             .fontWeight(.medium)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .overlay(
-                RoundedRectangle(cornerRadius: 4)
-                    .stroke(Color.accentColor, lineWidth: 1.5)
-            )
+            .modifier(BadgeModifier())
+    }
+}
+
+struct BadgeModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(macOS 26, *) {
+            content
+                .glassEffect(.regular, in: .capsule)
+        } else {
+            content
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(Color.accentColor, lineWidth: 1.5)
+                )
+        }
     }
 }
 

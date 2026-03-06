@@ -176,7 +176,7 @@ struct DiscoveryDeviceRow: View {
             HStack(spacing: 10) {
                 Image(systemName: icon)
                     .font(.system(size: 16))
-                    .foregroundColor(isSony ? .accentColor : .secondary)
+                    .foregroundColor(isSony ? .accentColor : .primary)
                     .frame(width: 24)
 
                 Text(name)
@@ -194,13 +194,31 @@ struct DiscoveryDeviceRow: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
-            .background(isSelected ? Color.accentColor.opacity(0.15) : Color(nsColor: .controlBackgroundColor).opacity(0.5))
-            .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(isSelected ? Color.accentColor.opacity(0.4) : Color(nsColor: .separatorColor).opacity(0.5), lineWidth: 0.5)
-            )
+            .modifier(DiscoveryRowModifier(isSelected: isSelected))
         }
         .buttonStyle(.plain)
+    }
+}
+
+struct DiscoveryRowModifier: ViewModifier {
+    let isSelected: Bool
+
+    func body(content: Content) -> some View {
+        if #available(macOS 26, *) {
+            content
+                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 8))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(isSelected ? Color.accentColor.opacity(0.6) : Color.clear, lineWidth: 1.5)
+                )
+        } else {
+            content
+                .background(isSelected ? Color.accentColor.opacity(0.15) : Color(nsColor: .controlBackgroundColor).opacity(0.5))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(isSelected ? Color.accentColor.opacity(0.4) : Color(nsColor: .separatorColor).opacity(0.5), lineWidth: 0.5)
+                )
+        }
     }
 }
