@@ -5,40 +5,25 @@ struct PlaybackTab: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                // Volume
-                Section {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Volume")
-                            .font(.headline)
-                        Slider(
-                            value: Binding(
-                                get: { Double(manager.playVolume) },
-                                set: { manager.playVolume = Int32($0) }
-                            ),
-                            in: 0...30,
-                            step: 1
-                        )
-                        Text("\(manager.playVolume)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
+            VStack(spacing: 24) {
+                // Now Playing area
+                VStack(spacing: 16) {
+                    Image(systemName: manager.playPause == .play ? "music.note" : "pause.circle")
+                        .font(.system(size: 48, weight: .thin))
+                        .foregroundColor(.accentColor)
+                        .frame(height: 56)
 
-                Divider()
-
-                // Controls
-                Section {
-                    Text("Controls")
-                        .font(.headline)
-                    HStack(spacing: 12) {
+                    // Controls
+                    HStack(spacing: 24) {
                         Button {
                             manager.sendPlaybackControl(.trackDown)
                         } label: {
                             Image(systemName: "backward.fill")
-                                .frame(maxWidth: .infinity)
+                                .font(.title2)
+                                .frame(width: 44, height: 44)
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.plain)
+                        .foregroundColor(.primary)
 
                         Button {
                             if manager.playPause == .play {
@@ -47,19 +32,49 @@ struct PlaybackTab: View {
                                 manager.sendPlaybackControl(.play)
                             }
                         } label: {
-                            Image(systemName: manager.playPause == .play ? "pause.fill" : "play.fill")
-                                .frame(maxWidth: .infinity)
+                            Image(systemName: manager.playPause == .play ? "pause.circle.fill" : "play.circle.fill")
+                                .font(.system(size: 48))
                         }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.plain)
+                        .foregroundColor(.accentColor)
 
                         Button {
                             manager.sendPlaybackControl(.trackUp)
                         } label: {
                             Image(systemName: "forward.fill")
-                                .frame(maxWidth: .infinity)
+                                .font(.title2)
+                                .frame(width: 44, height: 44)
                         }
-                        .buttonStyle(.bordered)
+                        .buttonStyle(.plain)
+                        .foregroundColor(.primary)
                     }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 8)
+
+                // Volume
+                VStack(spacing: 6) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "speaker.fill")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .frame(width: 16)
+                        Slider(
+                            value: Binding(
+                                get: { Double(manager.playVolume) },
+                                set: { manager.playVolume = Int32($0) }
+                            ),
+                            in: 0...30,
+                            step: 1
+                        )
+                        Image(systemName: "speaker.wave.3.fill")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .frame(width: 16)
+                    }
+                    Text("\(manager.playVolume)")
+                        .font(.system(.caption, design: .monospaced))
+                        .foregroundColor(.secondary)
                 }
             }
             .padding()

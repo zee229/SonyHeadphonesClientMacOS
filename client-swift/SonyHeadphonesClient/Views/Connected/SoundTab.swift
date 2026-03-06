@@ -35,20 +35,25 @@ struct SoundTab: View {
         manager.supports(.modeNcAsmDualASMLevelAdjNoiseAdaptation)
     }
 
+    private var ncAsmSelection: Int {
+        if !manager.ncAsmEnabled { return 2 }
+        if supportNC && supportASM {
+            return manager.ncAsmMode == .nc ? 0 : 1
+        }
+        return supportNC ? 0 : 1
+    }
+
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                // NC/ASM
+            VStack(alignment: .leading, spacing: 12) {
                 if supportNC || supportASM {
                     ambientSoundSection
                 }
 
-                // Speak To Chat
                 if manager.supports(.smartTalkingModeType2) {
                     speakToChatSection
                 }
 
-                // EQ & DSEE
                 equalizerSection
             }
             .padding()
@@ -57,14 +62,16 @@ struct SoundTab: View {
 
     @ViewBuilder
     private var ambientSoundSection: some View {
-        Section {
-            Text("Ambient Sound")
+        SoundCard {
+            Label("Ambient Sound", systemImage: "ear")
                 .font(.headline)
 
-            HStack(spacing: 16) {
+            // Mode picker as segmented-style pills
+            HStack(spacing: 6) {
                 if supportNC {
-                    RadioButton(
-                        title: "Noise Cancelling",
+                    ModePill(
+                        title: "NC",
+                        icon: "minus.circle",
                         isSelected: manager.ncAsmEnabled && (!supportASM || manager.ncAsmMode == .nc)
                     ) {
                         manager.ncAsmEnabled = true
@@ -72,8 +79,9 @@ struct SoundTab: View {
                     }
                 }
                 if supportASM {
-                    RadioButton(
-                        title: "Ambient Sound",
+                    ModePill(
+                        title: "Ambient",
+                        icon: "wind",
                         isSelected: manager.ncAsmEnabled && (!supportNC || manager.ncAsmMode == .asm_)
                     ) {
                         manager.ncAsmEnabled = true
@@ -83,14 +91,26 @@ struct SoundTab: View {
                         }
                     }
                 }
-                RadioButton(title: "Off", isSelected: !manager.ncAsmEnabled) {
+                ModePill(
+                    title: "Off",
+                    icon: "power",
+                    isSelected: !manager.ncAsmEnabled
+                ) {
                     manager.ncAsmEnabled = false
                 }
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Ambient Strength")
-                    .font(.subheadline)
+            // Ambient strength
+            VStack(spacing: 4) {
+                HStack {
+                    Text("Ambient Strength")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text("\(manager.ncAsmAmbientLevel)")
+                        .font(.system(.subheadline, design: .monospaced))
+                        .foregroundColor(.accentColor)
+                }
                 Slider(
                     value: Binding(
                         get: { Double(manager.ncAsmAmbientLevel) },
@@ -103,26 +123,32 @@ struct SoundTab: View {
 
             if supportAutoASM {
                 Toggle("Auto Ambient Sound", isOn: $manager.ncAsmAutoAsmEnabled)
+                    .font(.subheadline)
                 if manager.ncAsmAutoAsmEnabled {
                     Picker("Sensitivity", selection: $manager.ncAsmNoiseAdaptiveSensitivity) {
                         ForEach(NoiseAdaptiveSensitivity.allCases, id: \.self) {
                             Text($0.displayName).tag($0)
                         }
                     }
+                    .font(.subheadline)
                 }
             }
 
             Toggle("Voice Passthrough", isOn: $manager.ncAsmFocusOnVoice)
+                .font(.subheadline)
         }
     }
 
     @ViewBuilder
     private var speakToChatSection: some View {
-        Section {
-            Text("Speak To Chat")
-                .font(.headline)
-
-            Toggle("Enabled", isOn: $manager.speakToChatEnabled)
+        SoundCard {
+            HStack {
+                Label("Speak To Chat", systemImage: "message")
+                    .font(.headline)
+                Spacer()
+                Toggle("", isOn: $manager.speakToChatEnabled)
+                    .labelsHidden()
+            }
 
             if manager.speakToChatEnabled {
                 Picker("Sensitivity", selection: $manager.speakToChatDetectSensitivity) {
@@ -130,19 +156,21 @@ struct SoundTab: View {
                         Text($0.displayName).tag($0)
                     }
                 }
-                Picker("Mode Duration", selection: $manager.speakToModeOutTime) {
+                .font(.subheadline)
+                Picker("Timeout", selection: $manager.speakToModeOutTime) {
                     ForEach(ModeOutTime.allCases, id: \.self) {
                         Text($0.displayName).tag($0)
                     }
                 }
+                .font(.subheadline)
             }
         }
     }
 
     @ViewBuilder
     private var equalizerSection: some View {
-        Section {
-            Text("Equalizer & DSEE")
+        SoundCard {
+            Label("Equalizer", systemImage: "slider.vertical.3")
                 .font(.headline)
 
             Picker("Preset", selection: $manager.eqPresetId) {
@@ -150,17 +178,24 @@ struct SoundTab: View {
                     Text($0.displayName).tag($0)
                 }
             }
+            .font(.subheadline)
 
-            // EQ Bands
             if !manager.eqBands.isEmpty {
                 EqualizerView(bands: manager.eqBands) { index, value in
                     manager.setEqBandValue(index: index, value: value)
                 }
 
                 if manager.eqBands.count == 5 {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Clear Bass")
-                            .font(.subheadline)
+                    VStack(spacing: 4) {
+                        HStack {
+                            Text("Clear Bass")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text("\(manager.eqClearBass)")
+                                .font(.system(.subheadline, design: .monospaced))
+                                .foregroundColor(.accentColor)
+                        }
                         Slider(
                             value: Binding(
                                 get: { Double(manager.eqClearBass) },
@@ -172,36 +207,75 @@ struct SoundTab: View {
                     }
                 }
             }
+        }
 
-            Divider()
-
-            Text("DSEE")
-                .font(.subheadline)
-            HStack(spacing: 16) {
-                RadioButton(title: "Off", isSelected: !manager.upscalingEnabled) {
-                    manager.upscalingEnabled = false
-                }
-                RadioButton(title: "On (Auto)", isSelected: manager.upscalingEnabled) {
-                    manager.upscalingEnabled = true
-                }
+        // DSEE as separate card
+        SoundCard {
+            HStack {
+                Label("DSEE", systemImage: "waveform.badge.magnifyingglass")
+                    .font(.headline)
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { manager.upscalingEnabled },
+                    set: { manager.upscalingEnabled = $0 }
+                ))
+                .labelsHidden()
+                .disabled(!manager.upscalingAvailable)
             }
-            .disabled(!manager.upscalingAvailable)
+
+            if manager.upscalingEnabled {
+                Text("DSEE HX AI upscales compressed audio in real-time.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
         }
     }
 }
 
-struct RadioButton: View {
+// MARK: - Reusable Components
+
+struct SoundCard<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            content
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
+        )
+    }
+}
+
+struct ModePill: View {
     let title: String
+    let icon: String
     let isSelected: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 6) {
-                Image(systemName: isSelected ? "largecircle.fill.circle" : "circle")
-                    .foregroundColor(isSelected ? .accentColor : .secondary)
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.caption)
                 Text(title)
+                    .font(.subheadline)
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .frame(maxWidth: .infinity)
+            .background(isSelected ? Color.accentColor.opacity(0.2) : Color(nsColor: .controlBackgroundColor))
+            .foregroundColor(isSelected ? .accentColor : .secondary)
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isSelected ? Color.accentColor.opacity(0.5) : Color(nsColor: .separatorColor), lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
     }
