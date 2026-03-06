@@ -22,6 +22,8 @@
 		A100000D /* SystemTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000D; };
 		A100000E /* AboutTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000E; };
 		A100000F /* DisconnectedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B100000F; };
+		A1000030 /* MenuBarPopoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000030; };
+		A1000031 /* HeadphonesSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000031; };
 		A1000010 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B1000010; };
 		A1000020 /* libmdr.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B1000020; };
 		A1000021 /* libfmt.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B1000021; };
@@ -46,6 +48,8 @@
 		B100000D /* SystemTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemTab.swift; sourceTree = "<group>"; };
 		B100000E /* AboutTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutTab.swift; sourceTree = "<group>"; };
 		B100000F /* DisconnectedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisconnectedView.swift; sourceTree = "<group>"; };
+		B1000030 /* MenuBarPopoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarPopoverView.swift; sourceTree = "<group>"; };
+		B1000031 /* HeadphonesSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeadphonesSnapshot.swift; sourceTree = "<group>"; };
 		B1000010 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B1000011 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B1000012 /* SonyHeadphonesClient-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "SonyHeadphonesClient-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -117,6 +121,7 @@
 				B1000003 /* HeadphonesManager.swift */,
 				B1000004 /* DeviceState.swift */,
 				B1000005 /* MDREnums.swift */,
+				B1000031 /* HeadphonesSnapshot.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -128,8 +133,17 @@
 				D1000008 /* Connecting */,
 				D1000009 /* Connected */,
 				D100000D /* Disconnected */,
+				D1000030 /* MenuBar */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		D1000030 /* MenuBar */ = {
+			isa = PBXGroup;
+			children = (
+				B1000030 /* MenuBarPopoverView.swift */,
+			);
+			path = MenuBar;
 			sourceTree = "<group>";
 		};
 		D1000007 /* Discovery */ = {
@@ -296,6 +310,8 @@
 				A100000D /* SystemTab.swift in Sources */,
 				A100000E /* AboutTab.swift in Sources */,
 				A100000F /* DisconnectedView.swift in Sources */,
+				A1000030 /* MenuBarPopoverView.swift in Sources */,
+				A1000031 /* HeadphonesSnapshot.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

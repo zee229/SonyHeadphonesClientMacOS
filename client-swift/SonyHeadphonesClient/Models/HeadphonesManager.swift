@@ -132,6 +132,7 @@ final class HeadphonesManager: ObservableObject {
     private var headphones: OpaquePointer? // MDRHeadphones*
     private var pollTimer: AnyCancellable?
     private var isPollingSuppressed = false
+    private var lastSnapshotWrite: Date = .distantPast
 
     // Triggers macOS Bluetooth permission dialog on first launch
     private var centralManager: CBCentralManager?
@@ -524,5 +525,41 @@ final class HeadphonesManager: ObservableObject {
         // IsReady
         let newReady = mdrHeadphonesRequestIsReady(hp) == MDR_RESULT_OK
         if isReady != newReady { isReady = newReady }
+
+        writeSharedStateIfNeeded()
+    }
+
+    // MARK: - Shared State for Widget
+
+    private func writeSharedStateIfNeeded() {
+        let now = Date()
+        guard now.timeIntervalSince(lastSnapshotWrite) >= 5 else { return }
+        lastSnapshotWrite = now
+
+        let ncMode: String = {
+            if !ncAsmEnabled { return "off" }
+            return ncAsmMode == .nc ? "nc" : "ambient"
+        }()
+
+        let snapshot = HeadphonesSnapshot(
+            isConnected: connectionState == .connected,
+            modelName: modelName,
+            batteryL: Int(batteryL.level),
+            batteryR: Int(batteryR.level),
+            batteryCase: Int(batteryCase.level),
+            batteryLCharging: batteryL.charging != .notCharging,
+            batteryRCharging: batteryR.charging != .notCharging,
+            batteryCaseCharging: batteryCase.charging != .notCharging,
+            ncMode: ncMode,
+            audioCodec: audioCodec.displayName,
+            trackTitle: playTrackTitle,
+            trackArtist: playTrackArtist,
+            isPlaying: playPause == .play,
+            lastUpdated: now
+        )
+
+        if let data = try? JSONEncoder().encode(snapshot) {
+            UserDefaults(suiteName: HeadphonesSnapshot.suiteName)?.set(data, forKey: HeadphonesSnapshot.key)
+        }
     }
 }

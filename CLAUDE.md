@@ -63,7 +63,9 @@ There are no tests in this project.
   - `Models/HeadphonesManager.swift` — Central `@MainActor ObservableObject` with 60Hz poll loop
   - `Models/MDREnums.swift` — Swift enums mirroring C++ protocol enums
   - `Models/DeviceState.swift` — Swift value types for connection/battery/device state
+  - `Models/HeadphonesSnapshot.swift` — `Codable` snapshot struct for widget data sharing via `UserDefaults(suiteName:)`
   - `Views/` — SwiftUI views organized by connection state (Discovery, Connecting, Connected, Disconnected). About tab doubles as app settings (theme, window, permissions).
+  - `Views/MenuBar/MenuBarPopoverView.swift` — Menu bar popover: battery, NC controls, playback, volume. Uses `MenuBarExtra` scene with `.window` style.
   - `Bridge/SonyHeadphonesClient-Bridging-Header.h` — Imports all C API headers
 
 - **`libmdr/include/mdr-c/HeadphonesAccess.h`** — C shim layer exposing all `MDRProperty` fields as C getter/setter functions. Used by the SwiftUI client via bridging header. Implementation in `libmdr/src/HeadphonesAccess.cpp`.

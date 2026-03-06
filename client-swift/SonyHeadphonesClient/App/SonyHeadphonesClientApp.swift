@@ -42,9 +42,37 @@ struct SonyHeadphonesClientApp: App {
                 .frame(width: 360)
                 .fixedSize()
         }
+
+        MenuBarExtra {
+            MenuBarPopoverView()
+                .environmentObject(manager)
+        } label: {
+            MenuBarLabel(manager: manager)
+        }
+        .menuBarExtraStyle(.window)
     }
 
     private func applyTheme() {
         NSApp.appearance = AppTheme(rawValue: appTheme)?.nsAppearance
+    }
+}
+
+struct MenuBarLabel: View {
+    @ObservedObject var manager: HeadphonesManager
+
+    private var batteryText: String? {
+        guard manager.connectionState == .connected else { return nil }
+        let levels = [manager.batteryL, manager.batteryR].filter { $0.threshold > 0 }
+        guard let min = levels.min(by: { $0.level < $1.level }) else { return nil }
+        return "\(min.level)%"
+    }
+
+    var body: some View {
+        HStack(spacing: 2) {
+            Image(systemName: "headphones")
+            if let text = batteryText {
+                Text(text)
+            }
+        }
     }
 }
