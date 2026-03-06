@@ -70,6 +70,10 @@ Payload structs in `libmdr`:
 - **SDL3** (3.2.26) — Windowing/rendering
 - **Dear ImGui** (1.92.4) — GUI
 
+## UI Theme
+
+The app uses a custom macOS Sequoia dark mode theme defined in `SetupMacOSStyle()` in `SDLMain.cpp`. Accent color is macOS system blue `#0A84FF`. The SDL clear color (`30,30,30,255`) matches `WindowBg` to prevent gray bar artifacts. Battery progress bars use context-sensitive colors (green/orange/red). Primary action buttons (Connect, Play/Pause) use accent blue push/pop overrides.
+
 ## Key Conventions
 
 - C++20 required (Clang/Xcode)

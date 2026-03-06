@@ -64,11 +64,76 @@ void mainLoop()
     {
         ImGui::Render();
         SDL_SetRenderScale(gRenderer, io.DisplayFramebufferScale.x, io.DisplayFramebufferScale.y);
-        SDL_SetRenderDrawColor(gRenderer, 0, 0, 0, 0);
+        SDL_SetRenderDrawColor(gRenderer, 30, 30, 30, 255);
         SDL_RenderClear(gRenderer);
         ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), gRenderer);
         SDL_RenderPresent(gRenderer);
     }
+}
+
+void SetupMacOSStyle()
+{
+    ImGui::StyleColorsDark();
+    auto& style = ImGui::GetStyle();
+
+    // Geometry & spacing
+    style.WindowPadding        = ImVec2(12.0f, 12.0f);
+    style.WindowBorderSize     = 0.0f;
+    style.WindowRounding       = 0.0f;
+    style.PopupRounding        = 12.0f;
+    style.PopupBorderSize      = 0.5f;
+    style.FramePadding         = ImVec2(8.0f, 6.0f);
+    style.FrameRounding        = 6.0f;
+    style.ItemSpacing          = ImVec2(8.0f, 6.0f);
+    style.ScrollbarSize        = 10.0f;
+    style.ScrollbarRounding    = 5.0f;
+    style.GrabRounding         = 5.0f;
+    style.TabRounding          = 6.0f;
+    style.TabBarOverlineSize   = 0.0f;
+    style.ChildBorderSize      = 0.0f;
+    style.SeparatorTextBorderSize = 1.0f;
+    style.CircleTessellationMaxError = 0.01f;
+    style.DisabledAlpha        = 0.4f;
+
+    // macOS Sequoia dark mode colors
+    auto& c = style.Colors;
+    c[ImGuiCol_WindowBg]             = ImVec4(0.118f, 0.118f, 0.118f, 1.00f);    // #1E1E1E
+    c[ImGuiCol_PopupBg]              = ImVec4(0.153f, 0.153f, 0.161f, 1.00f);    // #272729
+    c[ImGuiCol_FrameBg]              = ImVec4(0.165f, 0.165f, 0.173f, 1.00f);    // #2A2A2C
+    c[ImGuiCol_FrameBgHovered]       = ImVec4(0.200f, 0.200f, 0.208f, 1.00f);
+    c[ImGuiCol_FrameBgActive]        = ImVec4(0.235f, 0.235f, 0.243f, 1.00f);
+    c[ImGuiCol_Button]               = ImVec4(0.200f, 0.200f, 0.208f, 1.00f);    // #333335
+    c[ImGuiCol_ButtonHovered]        = ImVec4(0.255f, 0.255f, 0.263f, 1.00f);    // #414143
+    c[ImGuiCol_ButtonActive]         = ImVec4(0.039f, 0.518f, 1.000f, 0.90f);    // #0A84FF
+    c[ImGuiCol_Text]                 = ImVec4(1.000f, 1.000f, 1.000f, 1.00f);
+    c[ImGuiCol_TextDisabled]         = ImVec4(0.557f, 0.557f, 0.576f, 1.00f);    // #8E8E93
+    c[ImGuiCol_Border]               = ImVec4(0.227f, 0.227f, 0.235f, 0.65f);    // #3A3A3C
+    c[ImGuiCol_Separator]            = ImVec4(0.227f, 0.227f, 0.235f, 0.50f);
+    c[ImGuiCol_SeparatorHovered]     = ImVec4(0.039f, 0.518f, 1.000f, 0.60f);
+    c[ImGuiCol_SeparatorActive]      = ImVec4(0.039f, 0.518f, 1.000f, 0.90f);
+    c[ImGuiCol_MenuBarBg]            = ImVec4(0.145f, 0.145f, 0.153f, 1.00f);    // #252527
+    c[ImGuiCol_Header]               = ImVec4(0.165f, 0.165f, 0.173f, 1.00f);    // #2A2A2C
+    c[ImGuiCol_HeaderHovered]        = ImVec4(0.039f, 0.518f, 1.000f, 0.30f);
+    c[ImGuiCol_HeaderActive]         = ImVec4(0.039f, 0.518f, 1.000f, 0.50f);
+    c[ImGuiCol_CheckMark]            = ImVec4(0.039f, 0.518f, 1.000f, 1.00f);    // #0A84FF
+    c[ImGuiCol_SliderGrab]           = ImVec4(0.039f, 0.518f, 1.000f, 1.00f);
+    c[ImGuiCol_SliderGrabActive]     = ImVec4(0.118f, 0.565f, 1.000f, 1.00f);
+    c[ImGuiCol_Tab]                  = ImVec4(0.165f, 0.165f, 0.173f, 1.00f);    // #2A2A2C
+    c[ImGuiCol_TabSelected]          = ImVec4(0.200f, 0.200f, 0.208f, 1.00f);    // #333335
+    c[ImGuiCol_TabSelectedOverline]  = ImVec4(0.039f, 0.518f, 1.000f, 1.00f);    // #0A84FF
+    c[ImGuiCol_TabHovered]           = ImVec4(0.039f, 0.518f, 1.000f, 0.30f);
+    c[ImGuiCol_PlotHistogram]        = ImVec4(0.039f, 0.518f, 1.000f, 1.00f);    // #0A84FF
+    c[ImGuiCol_PlotHistogramHovered] = ImVec4(0.118f, 0.565f, 1.000f, 1.00f);
+    c[ImGuiCol_ScrollbarBg]          = ImVec4(0.118f, 0.118f, 0.118f, 0.00f);
+    c[ImGuiCol_ScrollbarGrab]        = ImVec4(0.333f, 0.333f, 0.345f, 0.60f);    // #555558
+    c[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.400f, 0.400f, 0.412f, 0.80f);
+    c[ImGuiCol_ScrollbarGrabActive]  = ImVec4(0.467f, 0.467f, 0.478f, 1.00f);
+    c[ImGuiCol_ModalWindowDimBg]     = ImVec4(0.000f, 0.000f, 0.000f, 0.85f);
+    c[ImGuiCol_TitleBg]              = ImVec4(0.118f, 0.118f, 0.118f, 1.00f);
+    c[ImGuiCol_TitleBgActive]        = ImVec4(0.145f, 0.145f, 0.153f, 1.00f);
+    c[ImGuiCol_ResizeGrip]           = ImVec4(0.039f, 0.518f, 1.000f, 0.20f);
+    c[ImGuiCol_ResizeGripHovered]    = ImVec4(0.039f, 0.518f, 1.000f, 0.40f);
+    c[ImGuiCol_ResizeGripActive]     = ImVec4(0.039f, 0.518f, 1.000f, 0.70f);
 }
 
 int main(int, char**)
@@ -101,12 +166,8 @@ int main(int, char**)
         ImGui::CreateContext();
     }
     ImGuiIO& io = ImGui::GetIO();
-    // Setup Default Dear ImGui styles
-    ImGui::StyleColorsDark();
-    auto& style = ImGui::GetStyle();
-    style.FrameRounding = 8.0f;
-    style.CircleTessellationMaxError = 0.01f;
-    style.FramePadding = ImVec2(8.0f, 8.0f);
+    // Setup macOS-inspired style
+    SetupMacOSStyle();
     // Setup Platform/Renderer backends
     {
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls

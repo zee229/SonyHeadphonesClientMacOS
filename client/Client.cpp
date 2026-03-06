@@ -436,6 +436,8 @@ void ImEqualizer(Span<int> bands)
         ImGui::SeparatorText("5-Band EQ");
     if (numBands == 10)
         ImGui::SeparatorText("10-Band EQ");
+    ImGui::PushStyleColor(ImGuiCol_SliderGrab, ImVec4(0.039f, 0.518f, 1.000f, 1.00f));
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.130f, 0.130f, 0.138f, 1.00f));
     for (int i = 0; i < numBands; ++i)
     {
         ImGui::BeginGroup();
@@ -453,6 +455,7 @@ void ImEqualizer(Span<int> bands)
         if (i != numBands - 1)
             ImGui::SameLine(0.0f, padding);
     }
+    ImGui::PopStyleColor(2);
 }
 #pragma endregion
 
@@ -530,14 +533,16 @@ void DrawDeviceDiscovery()
                 ImGui::SeparatorText("Sony Devices");
                 for (int i = 0; i < nDeviceInfo; i++)
                     if (isSonyDevice(devices[i].szDeviceName))
-                        ImGui::RadioButton(devices[i].szDeviceName, &deviceIndex, i);
+                        if (ImGui::Selectable(devices[i].szDeviceName, deviceIndex == i))
+                            deviceIndex = i;
             }
             if (hasOther)
             {
                 ImGui::SeparatorText("Other Devices");
                 for (int i = 0; i < nDeviceInfo; i++)
                     if (!isSonyDevice(devices[i].szDeviceName))
-                        ImGui::RadioButton(devices[i].szDeviceName, &deviceIndex, i);
+                        if (ImGui::Selectable(devices[i].szDeviceName, deviceIndex == i))
+                            deviceIndex = i;
             }
         } else
         {
@@ -545,6 +550,9 @@ void DrawDeviceDiscovery()
             ImGui::TextWrapped(PSI_WARNING_SIGN " No devices available. Make sure your Bluetooth radio is turned on, and a compatible device is connected.");
         }
         ImGui::BeginDisabled(devices.empty());
+        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.039f, 0.518f, 1.000f, 0.80f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.039f, 0.518f, 1.000f, 1.00f));
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.020f, 0.400f, 0.850f, 1.00f));
         if (ImModalButton(PSI_LINK " Connect", 0, 2))
         {
             // XXX: Other service UUIDs?
@@ -554,6 +562,7 @@ void DrawDeviceDiscovery()
             else
                 connState = CONN_STATE_CONNECTING;
         }
+        ImGui::PopStyleColor(3);
         ImGui::EndDisabled();
         if (ImModalButton(PSI_REFRESH " Refresh", 1, 2) || pDeviceInfo == nullptr)
         {
@@ -646,7 +655,7 @@ void DrawDeviceControlsHeader()
             ImGui::EndMenu();
         }
         if (!gDevice.IsReady())
-            ImSpinner(1000, style.FontSizeBase * 0.5f, IM_COL32(255,255,255,127), 2.0f, false, true, 1.0f, ImEaseInOutCubic);
+            ImSpinner(1000, style.FontSizeBase * 0.5f, IM_COL32(10, 132, 255, 180), 2.0f, false, true, 1.0f, ImEaseInOutCubic);
         /* Cool Badges */
         // Title, Border Color, Text Color
         using Badge = Tuple<const char*, int, int>;
@@ -655,12 +664,12 @@ void DrawDeviceControlsHeader()
         /* Codec */
         if (gDevice.mSupport.contains(v2::MessageMdrV2FunctionType_Table1::CODEC_INDICATOR))
         {
-            *(badgeLast++) = {FormatEnum(gDevice.mAudioCodec), ~0u, ~0u};
+            *(badgeLast++) = {FormatEnum(gDevice.mAudioCodec), IM_COL32(10, 132, 255, 200), ~0u};
         }
         /* DSEE */
         if (gDevice.mUpscalingEnabled.current)
         {
-            *(badgeLast++) = {FormatEnum(gDevice.mUpscalingType), ~0u, ~0u};
+            *(badgeLast++) = {FormatEnum(gDevice.mUpscalingType), IM_COL32(10, 132, 255, 200), ~0u};
         }
         Span badges{badgeFirst, badgeLast};
         // Right-align and draw them
@@ -703,6 +712,11 @@ void DrawDeviceControlsHeader()
                 v2::MessageMdrV2FunctionType_Table1::CRADLE_BATTERY_LEVEL_INDICATOR);
             supportCase |= gDevice.mSupport.contains(
                 v2::MessageMdrV2FunctionType_Table1::CRADLE_BATTERY_LEVEL_WITH_THRESHOLD);
+            auto BatteryColor = [](Uint32 level) -> ImVec4 {
+                if (level <= 15) return ImVec4(1.0f, 0.271f, 0.227f, 1.0f);   // red
+                if (level <= 30) return ImVec4(1.0f, 0.624f, 0.039f, 1.0f);   // orange
+                return ImVec4(0.188f, 0.820f, 0.345f, 1.0f);                   // green
+            };
             if (ImGui::BeginTable("##Battery", 2, ImGuiTableFlags_SizingStretchProp))
             {
                 if (supportSingle && !supportLR && gDevice.mBatteryL.threshold)
@@ -712,7 +726,9 @@ void DrawDeviceControlsHeader()
                     ImGui::TableSetColumnIndex(0);
                     ImGui::Text("Battery: %.0d%%", single);
                     ImGui::TableSetColumnIndex(1);
+                    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, BatteryColor(single));
                     ImGui::ProgressBar(single / 100.0f, {-1, 0}, FormatEnum(gDevice.mBatteryL.charging));
+                    ImGui::PopStyleColor();
                 }
                 if (supportLR && gDevice.mBatteryL.threshold && gDevice.mBatteryR.threshold)
                 {
@@ -721,13 +737,17 @@ void DrawDeviceControlsHeader()
                     ImGui::TableSetColumnIndex(0);
                     ImGui::Text("L: %.0d%%", single);
                     ImGui::TableSetColumnIndex(1);
+                    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, BatteryColor(single));
                     ImGui::ProgressBar(single / 100.0f, {-1, 0}, FormatEnum(gDevice.mBatteryL.charging));
+                    ImGui::PopStyleColor();
                     single = gDevice.mBatteryR.level;
                     ImGui::TableNextRow();
                     ImGui::TableSetColumnIndex(0);
                     ImGui::Text("R: %.0d%%", single);
                     ImGui::TableSetColumnIndex(1);
+                    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, BatteryColor(single));
                     ImGui::ProgressBar(single / 100.0f, {-1, 0}, FormatEnum(gDevice.mBatteryR.charging));
+                    ImGui::PopStyleColor();
                 }
                 if (supportCase && gDevice.mBatteryCase.threshold)
                 {
@@ -736,7 +756,9 @@ void DrawDeviceControlsHeader()
                     ImGui::TableSetColumnIndex(0);
                     ImGui::Text("Case: %.0d%%", single);
                     ImGui::TableSetColumnIndex(1);
+                    ImGui::PushStyleColor(ImGuiCol_PlotHistogram, BatteryColor(single));
                     ImGui::ProgressBar(single / 100.0f, {-1, 0}, FormatEnum(gDevice.mBatteryCase.charging));
+                    ImGui::PopStyleColor();
                 }
                 ImGui::EndTable();
             }
@@ -778,6 +800,9 @@ void DrawDeviceControlsPlayback()
     ImGui::SeparatorText("Controls");
     if (ImModalButton(PSI_STEP_BACKWARD " Prev", 0, 3))
         gDevice.mPlayControl.desired = TRACK_DOWN;
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.039f, 0.518f, 1.000f, 0.80f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.039f, 0.518f, 1.000f, 1.00f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.020f, 0.400f, 0.850f, 1.00f));
     if (gDevice.mPlayPause == v2::t1::PlaybackStatus::PLAY)
     {
         if (ImModalButton(PSI_PAUSE " Pause", 1, 3))
@@ -788,6 +813,7 @@ void DrawDeviceControlsPlayback()
         if (ImModalButton(PSI_PLAY " Play", 1, 3))
             gDevice.mPlayControl.desired = PLAY;
     }
+    ImGui::PopStyleColor(3);
     if (ImModalButton(PSI_STEP_FORWARD "Next", 2, 3))
         gDevice.mPlayControl.desired = TRACK_UP;
 }
@@ -989,7 +1015,7 @@ void DrawDeviceControlsDevices()
     if (gDevice.mPairingMode.desired)
     {
         ImTextCentered("Pairing...");
-        ImSpinner(1000.0f, 16.0f, IM_COL32(0, 255, 0, 255), 2.0f, true, false, 1.0f, ImEaseInOutCubic);
+        ImSpinner(1000.0f, 16.0f, IM_COL32(10, 132, 255, 255), 2.0f, true, false, 1.0f, ImEaseInOutCubic);
         if (ImModalButton("Stop"))
             gDevice.mPairingMode.desired = false;
     }
@@ -1264,7 +1290,9 @@ void DrawDeviceControls()
     MDRConnection* conn = clientPlatformConnectionGet();
     int event = gDevice.PollEvents();
     DrawDeviceControlsHeader();
+    ImGui::Spacing();
     ImGui::Separator();
+    ImGui::Spacing();
     ImGui::BeginChild("##ControlTabs");
     DrawDeviceControlsTabs();
     ImScrollWhenDraggingAnywhere(ImGui::GetIO().MouseDelta, ImGuiMouseButton_Left);
@@ -1340,6 +1368,8 @@ void DrawApp()
     default:
         break;
     }
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     if (ImGui::Begin("SonyHeadphonesClient", nullptr, flags))
     {
         ExceptionHandler([&]
@@ -1362,6 +1392,7 @@ void DrawApp()
         });
     }
     ImGui::End();
+    ImGui::PopStyleVar(2);
 }
 
 // You know this one.
