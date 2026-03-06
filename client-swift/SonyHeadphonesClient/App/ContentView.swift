@@ -19,5 +19,13 @@ struct ContentView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .alert("Remember Device?", isPresented: $manager.showRememberDeviceAlert) {
+            Button("Remember") {
+                manager.rememberCurrentDevice()
+            }
+            Button("Not Now", role: .cancel) {}
+        } message: {
+            Text("Auto-connect to \(manager.modelName) on launch?")
+        }
     }
 }

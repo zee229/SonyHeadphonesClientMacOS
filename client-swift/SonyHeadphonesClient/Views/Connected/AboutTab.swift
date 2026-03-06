@@ -37,7 +37,7 @@ struct AboutTab: View {
                 }
 
                 // Settings
-                AppSettingsView()
+                AppSettingsView(manager: manager)
 
                 // App info
                 VStack(spacing: 4) {
@@ -55,6 +55,8 @@ struct AboutTab: View {
 }
 
 struct AppSettingsView: View {
+    var manager: HeadphonesManager?
+
     @AppStorage("appTheme") private var appTheme: Int = 0
     @AppStorage("alwaysOnTop") private var alwaysOnTop: Bool = false
     @AppStorage("menuBarEnabled") private var menuBarEnabled: Bool = true
@@ -63,6 +65,10 @@ struct AppSettingsView: View {
     @AppStorage("menuBarShowNCSection") private var showNC: Bool = true
     @AppStorage("menuBarShowPlaybackSection") private var showPlayback: Bool = true
     @AppStorage("menuBarShowVolumeControl") private var showVolume: Bool = true
+
+    private var rememberedDeviceName: String? {
+        UserDefaults.standard.string(forKey: "rememberedDeviceName")
+    }
 
     private var bluetoothStatus: (String, Color) {
         switch CBCentralManager.authorization {
@@ -108,6 +114,43 @@ struct AppSettingsView: View {
                 }
                 .onChange(of: alwaysOnTop) { _, newValue in
                     setWindowLevel(alwaysOnTop: newValue)
+                }
+            }
+
+            // Connection
+            SoundCard {
+                Label("Connection", systemImage: "link")
+                    .font(.headline)
+
+                if let name = rememberedDeviceName {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Remembered Device")
+                                .font(.subheadline)
+                            Text(name)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        Button("Forget") {
+                            if let mgr = manager {
+                                mgr.forgetRememberedDevice()
+                            } else {
+                                UserDefaults.standard.removeObject(forKey: "rememberedDeviceMac")
+                                UserDefaults.standard.removeObject(forKey: "rememberedDeviceName")
+                            }
+                        }
+                        .font(.caption)
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                } else {
+                    HStack {
+                        Text("No remembered device")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
                 }
             }
 

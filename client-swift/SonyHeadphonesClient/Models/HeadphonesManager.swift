@@ -126,6 +126,10 @@ final class HeadphonesManager: ObservableObject {
     @Published var connectionErrorMessage: String = ""
     @Published var headphonesErrorMessage: String = ""
 
+    // MARK: - Remember Device
+    @Published var showRememberDeviceAlert: Bool = false
+    private var connectedDeviceMac: String = ""
+
     // MARK: - Private
     private var macOSConnection: OpaquePointer? // MDRConnectionMacOS*
     private var connection: UnsafeMutablePointer<MDRConnection>? // MDRConnection*
@@ -144,6 +148,7 @@ final class HeadphonesManager: ObservableObject {
         connection = mdrConnectionMacOSGet(macOSConnection)
         connectionState = .discovering
         refreshDevices()
+        autoConnectIfRemembered()
     }
 
     nonisolated deinit {
@@ -210,6 +215,7 @@ final class HeadphonesManager: ObservableObject {
     func connect(deviceIndex: Int) {
         guard let conn = connection else { return }
         let mac = deviceMac(at: deviceIndex)
+        connectedDeviceMac = mac
         let uuid = MDR_SERVICE_UUID_XM5
         let r = mdrConnectionConnect(conn, mac, uuid)
         if r != MDR_RESULT_OK && r != MDR_RESULT_INPROGRESS {
@@ -218,6 +224,35 @@ final class HeadphonesManager: ObservableObject {
         }
         connectionState = .connecting
         startPollTimer()
+    }
+
+    var rememberedDeviceMac: String? {
+        UserDefaults.standard.string(forKey: "rememberedDeviceMac")
+    }
+
+    var rememberedDeviceName: String? {
+        UserDefaults.standard.string(forKey: "rememberedDeviceName")
+    }
+
+    func rememberCurrentDevice() {
+        UserDefaults.standard.set(connectedDeviceMac, forKey: "rememberedDeviceMac")
+        UserDefaults.standard.set(modelName, forKey: "rememberedDeviceName")
+    }
+
+    func forgetRememberedDevice() {
+        UserDefaults.standard.removeObject(forKey: "rememberedDeviceMac")
+        UserDefaults.standard.removeObject(forKey: "rememberedDeviceName")
+    }
+
+    private func autoConnectIfRemembered() {
+        guard let savedMac = rememberedDeviceMac, !savedMac.isEmpty else { return }
+        for (i, _) in devices.enumerated() {
+            if deviceMac(at: i) == savedMac {
+                selectedDeviceIndex = i
+                connect(deviceIndex: i)
+                return
+            }
+        }
     }
 
     func disconnect() {
@@ -314,6 +349,9 @@ final class HeadphonesManager: ObservableObject {
                 return
             }
             connectionState = .connected
+            if rememberedDeviceMac != connectedDeviceMac {
+                showRememberDeviceAlert = true
+            }
 
         case MDR_RESULT_ERROR_TIMEOUT, MDR_RESULT_INPROGRESS:
             // Still connecting

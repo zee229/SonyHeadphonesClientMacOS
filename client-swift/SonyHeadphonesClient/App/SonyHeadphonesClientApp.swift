@@ -38,6 +38,14 @@ struct SonyHeadphonesClientApp: App {
                 .onChange(of: appTheme) { _, _ in applyTheme() }
         }
         .windowResizability(.contentSize)
+        .commands {
+            CommandMenu("App") {
+                Button("Relaunch") {
+                    relaunchApp()
+                }
+                .keyboardShortcut("r", modifiers: .command)
+            }
+        }
 
         Settings {
             AppSettingsView()
@@ -56,6 +64,14 @@ struct SonyHeadphonesClientApp: App {
 
     private func applyTheme() {
         NSApp.appearance = AppTheme(rawValue: appTheme)?.nsAppearance
+    }
+
+    private func relaunchApp() {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: "/bin/sh")
+        task.arguments = ["-c", "sleep 0.3 && open -a \"\(Bundle.main.bundleURL.path)\""]
+        try? task.run()
+        NSApp.terminate(nil)
     }
 
     private func registerLaunchAtLoginIfNeeded() {
