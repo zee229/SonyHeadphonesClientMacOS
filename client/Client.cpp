@@ -485,6 +485,18 @@ void ExceptionHandler(auto&& func)
     }
 }
 
+static bool isSonyDevice(const char* name)
+{
+    static const char* prefixes[] = {
+        "WH-", "WF-", "WI-", "MDR-",
+        "LinkBuds", "ULT WEAR", "INZONE"
+    };
+    for (const auto& prefix : prefixes)
+        if (strncasecmp(name, prefix, strlen(prefix)) == 0)
+            return true;
+    return false;
+}
+
 void DrawDeviceDiscovery()
 {
     MDR_CHECK(connState == CONN_STATE_NO_CONNECTION);
@@ -503,15 +515,39 @@ void DrawDeviceDiscovery()
         ImTextCentered("SonyHeadphonesClient");
         ImGui::PopFont();
         ImTextCentered(fmt::format("Version: {}, Branch: {}, Commit: {}, On {}", CLIENT_VERSION, MDR_GIT_BRANCH_NAME, MDR_GIT_COMMIT_HASH, MDR_PLATFORM_OS).c_str());
-        ImGui::SeparatorText("Available Devices");
         static int deviceIndex = 0;
         if (!devices.empty())
         {
-            int btnIndex = 0;
+            bool hasSony = false, hasOther = false;
             for (const auto& device : devices)
-                ImGui::RadioButton(device.szDeviceName, &deviceIndex, btnIndex++);
+            {
+                if (isSonyDevice(device.szDeviceName)) hasSony = true;
+                else hasOther = true;
+            }
+
+            if (hasSony)
+            {
+                ImGui::SeparatorText("Sony Devices");
+                int btnIndex = 0;
+                for (const auto& device : devices)
+                    if (isSonyDevice(device.szDeviceName))
+                        ImGui::RadioButton(device.szDeviceName, &deviceIndex, btnIndex++);
+                    else
+                        btnIndex++;
+            }
+            if (hasOther)
+            {
+                ImGui::SeparatorText("Other Devices");
+                int btnIndex = 0;
+                for (const auto& device : devices)
+                    if (!isSonyDevice(device.szDeviceName))
+                        ImGui::RadioButton(device.szDeviceName, &deviceIndex, btnIndex++);
+                    else
+                        btnIndex++;
+            }
         } else
         {
+            ImGui::SeparatorText("Available Devices");
             ImGui::TextWrapped(PSI_WARNING_SIGN " No devices available. Make sure your Bluetooth radio is turned on, and a compatible device is connected.");
         }
         ImGui::BeginDisabled(devices.empty());
