@@ -1,5 +1,5 @@
 import Foundation
-import Combine
+@preconcurrency import Combine
 import CoreBluetooth
 
 @MainActor
@@ -145,10 +145,12 @@ final class HeadphonesManager: ObservableObject {
         refreshDevices()
     }
 
-    deinit {
-        pollTimer?.cancel()
-        if let hp = headphones { mdrHeadphonesDestroy(hp) }
-        if let conn = macOSConnection { mdrConnectionMacOSDestroy(conn) }
+    nonisolated deinit {
+        MainActor.assumeIsolated {
+            pollTimer?.cancel()
+            if let hp = headphones { mdrHeadphonesDestroy(hp) }
+            if let conn = macOSConnection { mdrConnectionMacOSDestroy(conn) }
+        }
     }
 
     // MARK: - Device Discovery

@@ -98,6 +98,50 @@ struct PlayButtonModifier: ViewModifier {
     }
 }
 
+// MARK: - Audio Visualizer
+
+struct AudioVisualizerView: View {
+    let isPlaying: Bool
+    private let barCount = 9
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 24, paused: !isPlaying)) { timeline in
+            let time = timeline.date.timeIntervalSinceReferenceDate
+
+            HStack(alignment: .bottom, spacing: 3) {
+                ForEach(0..<barCount, id: \.self) { index in
+                    let h = isPlaying ? barHeight(for: index, at: time) : 0.05
+
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [.accentColor.opacity(0.3), .accentColor],
+                                startPoint: .bottom,
+                                endPoint: .top
+                            )
+                        )
+                        .frame(width: 3, height: 3 + h * 37)
+                }
+            }
+            .frame(height: 40)
+        }
+    }
+
+    private func barHeight(for index: Int, at time: TimeInterval) -> CGFloat {
+        let f1: [Double] = [1.3, 1.8, 1.0, 2.1, 0.9, 1.6, 1.2, 1.7, 1.1]
+        let f2: [Double] = [2.7, 2.2, 3.1, 1.5, 2.9, 2.4, 2.0, 2.6, 3.3]
+        let shape: [Double] = [0.5, 0.7, 0.85, 0.95, 1.0, 0.95, 0.85, 0.7, 0.5]
+        let phase = Double(index) * 0.618
+
+        let v1 = sin(time * f1[index] * .pi + phase)
+        let v2 = sin(time * f2[index] * .pi + phase * 1.3)
+        let v3 = sin(time * 0.4 * .pi + phase * 0.5)
+
+        let combined = ((v1 * 0.5 + v2 * 0.3 + v3 * 0.2 + 1) / 2) * shape[index]
+        return CGFloat(max(0.05, min(1.0, combined)))
+    }
+}
+
 // MARK: - Playback Tab
 
 struct PlaybackTab: View {
@@ -197,11 +241,19 @@ struct PlaybackTab: View {
         let isPlaying = manager.playPause == .play
 
         VStack(spacing: 8) {
-            if hasTrack {
+            if isPlaying {
+                AudioVisualizerView(isPlaying: true)
+            } else if hasTrack {
                 Image(systemName: "music.note")
                     .font(.system(size: 32, weight: .thin))
                     .foregroundColor(.accentColor)
+            } else {
+                Image(systemName: "music.note.slash")
+                    .font(.system(size: 32, weight: .thin))
+                    .foregroundColor(.secondary)
+            }
 
+            if hasTrack {
                 Text(trackTitle)
                     .font(.headline)
                     .lineLimit(2)
@@ -230,10 +282,6 @@ struct PlaybackTab: View {
                         .foregroundColor(.secondary)
                 }
             } else if isPlaying {
-                Image(systemName: "speaker.wave.2")
-                    .font(.system(size: 32, weight: .thin))
-                    .foregroundColor(.accentColor)
-
                 Text("Audio Playing")
                     .font(.headline)
 
@@ -241,10 +289,6 @@ struct PlaybackTab: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             } else {
-                Image(systemName: "music.note.slash")
-                    .font(.system(size: 32, weight: .thin))
-                    .foregroundColor(.secondary)
-
                 Text("Not Playing")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
