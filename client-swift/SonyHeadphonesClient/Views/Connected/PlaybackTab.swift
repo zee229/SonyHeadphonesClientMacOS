@@ -194,13 +194,14 @@ struct PlaybackTab: View {
     @ViewBuilder
     private var nowPlayingSection: some View {
         let hasTrack = !trackTitle.isEmpty
+        let isPlaying = manager.playPause == .play
 
         VStack(spacing: 8) {
-            Image(systemName: hasTrack ? "music.note" : "music.note.slash")
-                .font(.system(size: 32, weight: .thin))
-                .foregroundColor(hasTrack ? .accentColor : .secondary)
-
             if hasTrack {
+                Image(systemName: "music.note")
+                    .font(.system(size: 32, weight: .thin))
+                    .foregroundColor(.accentColor)
+
                 Text(trackTitle)
                     .font(.headline)
                     .lineLimit(2)
@@ -228,7 +229,22 @@ struct PlaybackTab: View {
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
+            } else if isPlaying {
+                Image(systemName: "speaker.wave.2")
+                    .font(.system(size: 32, weight: .thin))
+                    .foregroundColor(.accentColor)
+
+                Text("Audio Playing")
+                    .font(.headline)
+
+                Text("Source not recognized")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             } else {
+                Image(systemName: "music.note.slash")
+                    .font(.system(size: 32, weight: .thin))
+                    .foregroundColor(.secondary)
+
                 Text("Not Playing")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
