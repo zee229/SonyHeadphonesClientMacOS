@@ -528,22 +528,16 @@ void DrawDeviceDiscovery()
             if (hasSony)
             {
                 ImGui::SeparatorText("Sony Devices");
-                int btnIndex = 0;
-                for (const auto& device : devices)
-                    if (isSonyDevice(device.szDeviceName))
-                        ImGui::RadioButton(device.szDeviceName, &deviceIndex, btnIndex++);
-                    else
-                        btnIndex++;
+                for (int i = 0; i < nDeviceInfo; i++)
+                    if (isSonyDevice(devices[i].szDeviceName))
+                        ImGui::RadioButton(devices[i].szDeviceName, &deviceIndex, i);
             }
             if (hasOther)
             {
                 ImGui::SeparatorText("Other Devices");
-                int btnIndex = 0;
-                for (const auto& device : devices)
-                    if (!isSonyDevice(device.szDeviceName))
-                        ImGui::RadioButton(device.szDeviceName, &deviceIndex, btnIndex++);
-                    else
-                        btnIndex++;
+                for (int i = 0; i < nDeviceInfo; i++)
+                    if (!isSonyDevice(devices[i].szDeviceName))
+                        ImGui::RadioButton(devices[i].szDeviceName, &deviceIndex, i);
             }
         } else
         {
@@ -565,6 +559,15 @@ void DrawDeviceDiscovery()
         {
             int res = mdrConnectionGetDevicesList(conn, &pDeviceInfo, &nDeviceInfo);
             MDR_CHECK_MSG(res == MDR_RESULT_OK, "Failed to get device list. Error: {}", mdrResultString(res));
+            deviceIndex = 0;
+            for (int i = 0; i < nDeviceInfo; i++)
+            {
+                if (isSonyDevice(pDeviceInfo[i].szDeviceName))
+                {
+                    deviceIndex = i;
+                    break;
+                }
+            }
         }
         ImGui::Separator();
         ImTextCentered(PSI_WARNING_SIGN " This product is not affiliated with Sony. Use at your own risk. " PSI_WARNING_SIGN);
