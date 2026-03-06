@@ -17,11 +17,19 @@ cmake --build . --target mdr mdr_PlatformMacOS
 # Build legacy SDL3+ImGui client
 cmake --build . --target SonyHeadphonesClient
 
-# Build SwiftUI client (requires Xcode)
+# Build SwiftUI client (CLI — no Xcode required)
 # 1. First build libmdr above
-# 2. Open client-swift/SonyHeadphonesClient.xcodeproj in Xcode
-# 3. Build and run (Cmd+R)
-# The Xcode project has a pre-build script that also builds libmdr.
+# 2. Run swiftc with all source files:
+swiftc -target arm64-apple-macosx14.0 -sdk $(xcrun --show-sdk-path) \
+  -import-objc-header client-swift/SonyHeadphonesClient/Bridge/SonyHeadphonesClient-Bridging-Header.h \
+  -I libmdr/include \
+  -L build/libmdr/src -L build/libmdr/src/Platform/MacOS -L build/_deps/fmt-build \
+  -lmdr -lmdr_PlatformMacOS -lfmt -lstdc++ \
+  -framework SwiftUI -framework AppKit -framework CoreBluetooth -framework IOBluetooth \
+  -o build/SonyHeadphonesClientSwift.app/Contents/MacOS/SonyHeadphonesClient \
+  $(find client-swift -name '*.swift')
+# 3. open build/SonyHeadphonesClientSwift.app
+# Alternatively, open client-swift/SonyHeadphonesClient.xcodeproj in Xcode and build (Cmd+R).
 
 # Universal binary (arm64 + x86_64)
 cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
@@ -50,12 +58,12 @@ There are no tests in this project.
 - **`client/`** — Legacy GUI application using SDL3 + Dear ImGui. Single main UI file `Client.cpp` (~52K). Entry point in `SDLMain.cpp`.
 
 - **`client-swift/`** — Native SwiftUI GUI application. Xcode project at `SonyHeadphonesClient.xcodeproj`. Uses a bridging header to call the C API from `libmdr`. Key files:
-  - `App/SonyHeadphonesClientApp.swift` — `@main` entry point, `WindowGroup`
+  - `App/SonyHeadphonesClientApp.swift` — `@main` entry point, `WindowGroup`, `Settings` scene (Cmd+,), `AppTheme` enum, theme management via `NSApp.appearance`
   - `App/ContentView.swift` — State-machine router based on connection state
   - `Models/HeadphonesManager.swift` — Central `@MainActor ObservableObject` with 60Hz poll loop
   - `Models/MDREnums.swift` — Swift enums mirroring C++ protocol enums
   - `Models/DeviceState.swift` — Swift value types for connection/battery/device state
-  - `Views/` — SwiftUI views organized by connection state (Discovery, Connecting, Connected, Disconnected)
+  - `Views/` — SwiftUI views organized by connection state (Discovery, Connecting, Connected, Disconnected). About tab doubles as app settings (theme, window, permissions).
   - `Bridge/SonyHeadphonesClient-Bridging-Header.h` — Imports all C API headers
 
 - **`libmdr/include/mdr-c/HeadphonesAccess.h`** — C shim layer exposing all `MDRProperty` fields as C getter/setter functions. Used by the SwiftUI client via bridging header. Implementation in `libmdr/src/HeadphonesAccess.cpp`.
@@ -92,13 +100,14 @@ Payload structs in `libmdr`:
 
 ## UI Theme
 
-**SwiftUI client** (`client-swift/`): Uses native macOS dark mode with system accent color. Battery progress bars use context-sensitive colors (green/orange/red). The SwiftUI app uses `LSUIElement = YES` to be a menu-bar-less app (matching the original).
+**SwiftUI client** (`client-swift/`): Supports System/Light/Dark theme switching via `NSApp.appearance` (persisted in `@AppStorage("appTheme")`). On macOS 26 (Tahoe), uses Liquid Glass design language (`glassEffect` API) for cards, pills, badges, and buttons with `@available(macOS 26, *)` checks — falls back to manual background/cornerRadius/stroke styling on macOS 14/15. Shared modifiers: `GlassCardModifier`, `ModePillModifier` (in `SoundTab.swift`), `BadgeModifier` (in `HeaderView.swift`), `DeviceCardModifier` (in `DevicesTab.swift`), `DiscoveryRowModifier` (in `DiscoveryView.swift`), `PlayButtonModifier` (in `PlaybackTab.swift`). Battery progress bars use context-sensitive colors (green/orange/red).
 
 **Legacy ImGui client** (`client/`): Uses a custom macOS Sequoia dark mode theme defined in `SetupMacOSStyle()` in `SDLMain.cpp`. Accent color is macOS system blue `#0A84FF`.
 
 ## Key Conventions
 
-- C++20 required (Clang/Xcode)
+- C++20 required (Clang/Xcode), Swift 6.0
+- macOS 14+ deployment target, macOS 26+ for Liquid Glass
 - macOS only — `MDR_PLATFORM_OS` is always `MACOS`
 - Exceptions used for validation failures and `MDR_CHECK`s
 - CI targets `macos-only` and `main` branches
