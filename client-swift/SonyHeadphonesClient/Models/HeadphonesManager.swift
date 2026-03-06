@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import CoreBluetooth
 
 @MainActor
 final class HeadphonesManager: ObservableObject {
@@ -132,8 +133,12 @@ final class HeadphonesManager: ObservableObject {
     private var pollTimer: AnyCancellable?
     private var isPollingSuppressed = false
 
+    // Triggers macOS Bluetooth permission dialog on first launch
+    private var centralManager: CBCentralManager?
+
     // MARK: - Lifecycle
     init() {
+        centralManager = CBCentralManager(delegate: nil, queue: nil)
         macOSConnection = mdrConnectionMacOSCreate()
         connection = mdrConnectionMacOSGet(macOSConnection)
         connectionState = .discovering

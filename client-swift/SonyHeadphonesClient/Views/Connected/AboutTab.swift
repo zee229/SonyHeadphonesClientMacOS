@@ -126,13 +126,34 @@ struct AppSettingsView: View {
 
                 if CBCentralManager.authorization != .allowedAlways {
                     Button {
-                        openPrivacySettings()
+                        openPrivacySettings("Privacy_Bluetooth")
                     } label: {
                         Label("Grant in System Settings", systemImage: "arrow.up.forward.app")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(.bordered)
                     .controlSize(.small)
+                }
+
+                Divider()
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Automation")
+                            .font(.subheadline)
+                        Text("Required for Now Playing info (Spotify, Music)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Button {
+                        openPrivacySettings("Privacy_Automation")
+                    } label: {
+                        Image(systemName: "arrow.up.forward.app")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .help("Open Automation settings")
                 }
             }
         }
@@ -141,10 +162,10 @@ struct AppSettingsView: View {
         }
     }
 
-    private func openPrivacySettings() {
+    private func openPrivacySettings(_ section: String) {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-        process.arguments = ["x-apple.systempreferences:com.apple.preference.security?Privacy_Bluetooth"]
+        process.arguments = ["x-apple.systempreferences:com.apple.preference.security?\(section)"]
         try? process.run()
     }
 
