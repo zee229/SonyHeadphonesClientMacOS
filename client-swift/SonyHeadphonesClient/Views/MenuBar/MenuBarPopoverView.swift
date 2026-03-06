@@ -201,6 +201,17 @@ struct MenuBarPopoverView: View {
 
     // MARK: - Playback
 
+    private var useAppleScriptControls: Bool {
+        manager.playTrackTitle.isEmpty && nowPlaying.selectedSource != nil
+    }
+
+    private var menuBarIsPlaying: Bool {
+        if useAppleScriptControls {
+            return nowPlaying.selectedSource?.isPlaying ?? false
+        }
+        return manager.playPause == .play
+    }
+
     @ViewBuilder
     private var playbackSection: some View {
         VStack(spacing: 6) {
@@ -221,26 +232,53 @@ struct MenuBarPopoverView: View {
                 }
             }
 
+            if nowPlaying.hasMultipleSources {
+                HStack(spacing: 4) {
+                    ForEach(nowPlaying.sources) { src in
+                        MenuBarSourcePill(
+                            source: src,
+                            isSelected: nowPlaying.selectedSourceId == src.id
+                        ) {
+                            nowPlaying.selectedSourceId = src.id
+                        }
+                    }
+                }
+            }
+
             HStack(spacing: 16) {
-                Button { manager.sendPlaybackControl(.trackDown) } label: {
+                Button {
+                    if useAppleScriptControls, let id = nowPlaying.selectedSourceId {
+                        nowPlaying.sendPreviousTrack(for: id)
+                    } else {
+                        manager.sendPlaybackControl(.trackDown)
+                    }
+                } label: {
                     Image(systemName: "backward.fill").font(.caption)
                 }
                 .buttonStyle(.plain)
 
                 Button {
-                    if manager.playPause == .play {
+                    if useAppleScriptControls, let id = nowPlaying.selectedSourceId {
+                        nowPlaying.sendPlayPause(for: id)
+                    } else if manager.playPause == .play {
                         manager.sendPlaybackControl(.pause)
                     } else {
                         manager.sendPlaybackControl(.play)
                     }
                 } label: {
-                    Image(systemName: manager.playPause == .play ? "pause.fill" : "play.fill")
+                    Image(systemName: menuBarIsPlaying ? "pause.fill" : "play.fill")
                         .font(.body)
                 }
                 .buttonStyle(.plain)
                 .foregroundColor(.accentColor)
 
-                Button { manager.sendPlaybackControl(.trackUp) } label: {
+                Button {
+                    if useAppleScriptControls, let id = nowPlaying.selectedSourceId {
+                        nowPlaying.sendNextTrack(for: id)
+                    } else {
+                        manager.sendPlaybackControl(.trackUp)
+                    }
+                } label: {
                     Image(systemName: "forward.fill").font(.caption)
                 }
                 .buttonStyle(.plain)
@@ -386,6 +424,39 @@ struct MenuBarModePill: View {
                     .font(.system(size: 9))
                 Text(title)
                     .font(.caption2)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .frame(maxWidth: .infinity)
+            .background(isSelected ? Color.accentColor.opacity(0.2) : Color(nsColor: .controlBackgroundColor))
+            .foregroundColor(isSelected ? .accentColor : .secondary)
+            .cornerRadius(6)
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(isSelected ? Color.accentColor.opacity(0.5) : Color(nsColor: .separatorColor), lineWidth: 0.5)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct MenuBarSourcePill: View {
+    let source: MediaSource
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 3) {
+                Image(systemName: source.sfSymbol)
+                    .font(.system(size: 9))
+                Text(source.displayName)
+                    .font(.caption2)
+                if source.isPlaying {
+                    Circle()
+                        .fill(Color.green)
+                        .frame(width: 5, height: 5)
+                }
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 4)

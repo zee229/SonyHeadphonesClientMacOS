@@ -1,15 +1,44 @@
 import SwiftUI
 
+// MARK: - Media Source
+
+struct MediaSource: Identifiable, Equatable {
+    let id: String
+    var title: String
+    var artist: String
+    var album: String
+    var isPlaying: Bool
+
+    var displayName: String {
+        id == "Music" ? "Apple Music" : id
+    }
+
+    var sfSymbol: String {
+        id == "Spotify" ? "music.note.list" : "music.quarternote.3"
+    }
+}
+
 // MARK: - Now Playing Monitor (AppleScript-based)
 
 @MainActor
 class NowPlayingMonitor: ObservableObject {
-    @Published var title: String = ""
-    @Published var artist: String = ""
-    @Published var album: String = ""
-    @Published var source: String = ""
+    @Published var sources: [MediaSource] = []
+    @Published var selectedSourceId: String?
 
     private var timer: Timer?
+
+    // Backward-compatible computed properties from selected source
+    var title: String { selectedSource?.title ?? "" }
+    var artist: String { selectedSource?.artist ?? "" }
+    var album: String { selectedSource?.album ?? "" }
+    var source: String { selectedSource?.displayName ?? "" }
+
+    var selectedSource: MediaSource? {
+        guard let id = selectedSourceId else { return sources.first }
+        return sources.first(where: { $0.id == id }) ?? sources.first
+    }
+
+    var hasMultipleSources: Bool { sources.count > 1 }
 
     func start() {
         refresh()
@@ -25,38 +54,44 @@ class NowPlayingMonitor: ObservableObject {
 
     private func refresh() {
         Task.detached {
-            let result = Self.queryNowPlaying()
+            let newSources = Self.queryAllSources()
             await MainActor.run {
-                if self.title != result.title { self.title = result.title }
-                if self.artist != result.artist { self.artist = result.artist }
-                if self.album != result.album { self.album = result.album }
-                if self.source != result.source { self.source = result.source }
+                self.sources = newSources
+                // Auto-select logic
+                if newSources.isEmpty {
+                    self.selectedSourceId = nil
+                } else if newSources.count == 1 {
+                    self.selectedSourceId = newSources[0].id
+                } else if let selected = self.selectedSourceId,
+                          !newSources.contains(where: { $0.id == selected }) {
+                    self.selectedSourceId = newSources.first?.id
+                }
             }
         }
     }
 
-    private nonisolated static func queryNowPlaying() -> (title: String, artist: String, album: String, source: String) {
-        // Try Spotify first, then Music
+    private nonisolated static func queryAllSources() -> [MediaSource] {
         let script = """
+        set output to ""
         try
             if application "Spotify" is running then
                 tell application "Spotify"
-                    if player state is playing then
-                        return "Spotify" & "\\n" & (name of current track) & "\\n" & (artist of current track) & "\\n" & (album of current track)
-                    end if
+                    set pState to "paused"
+                    if player state is playing then set pState to "playing"
+                    set output to output & "Spotify" & "\\n" & pState & "\\n" & (name of current track) & "\\n" & (artist of current track) & "\\n" & (album of current track) & "\\n---\\n"
                 end tell
             end if
         end try
         try
             if application "Music" is running then
                 tell application "Music"
-                    if player state is playing then
-                        return "Music" & "\\n" & (name of current track) & "\\n" & (artist of current track) & "\\n" & (album of current track)
-                    end if
+                    set pState to "paused"
+                    if player state is playing then set pState to "playing"
+                    set output to output & "Music" & "\\n" & pState & "\\n" & (name of current track) & "\\n" & (artist of current track) & "\\n" & (album of current track) & "\\n---\\n"
                 end tell
             end if
         end try
-        return ""
+        return output
         """
 
         let process = Process()
@@ -66,18 +101,72 @@ class NowPlayingMonitor: ObservableObject {
         process.standardOutput = pipe
         process.standardError = FileHandle.nullDevice
 
+        var results: [MediaSource] = []
         do {
             try process.run()
             process.waitUntilExit()
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
             let output = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            let parts = output.components(separatedBy: "\n")
-            if parts.count >= 4 {
-                return (parts[1], parts[2], parts[3], parts[0])
+
+            let blocks = output.components(separatedBy: "---")
+            for block in blocks {
+                let lines = block.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: "\n")
+                if lines.count >= 5 {
+                    results.append(MediaSource(
+                        id: lines[0],
+                        title: lines[2],
+                        artist: lines[3],
+                        album: lines[4],
+                        isPlaying: lines[1] == "playing"
+                    ))
+                }
             }
         } catch {}
 
-        return ("", "", "", "")
+        return results
+    }
+
+    // MARK: - AppleScript Playback Controls
+
+    func sendPlayPause(for sourceId: String) {
+        let cmd: String
+        if sourceId == "Spotify" {
+            cmd = "tell application \"Spotify\" to playpause"
+        } else {
+            cmd = "tell application \"Music\" to playpause"
+        }
+        runAppleScript(cmd)
+    }
+
+    func sendNextTrack(for sourceId: String) {
+        let cmd: String
+        if sourceId == "Spotify" {
+            cmd = "tell application \"Spotify\" to next track"
+        } else {
+            cmd = "tell application \"Music\" to next track"
+        }
+        runAppleScript(cmd)
+    }
+
+    func sendPreviousTrack(for sourceId: String) {
+        let cmd: String
+        if sourceId == "Spotify" {
+            cmd = "tell application \"Spotify\" to previous track"
+        } else {
+            cmd = "tell application \"Music\" to back track"
+        }
+        runAppleScript(cmd)
+    }
+
+    private func runAppleScript(_ script: String) {
+        Task.detached {
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
+            process.arguments = ["-e", script]
+            process.standardOutput = FileHandle.nullDevice
+            process.standardError = FileHandle.nullDevice
+            try? process.run()
+        }
     }
 }
 
@@ -142,6 +231,62 @@ struct AudioVisualizerView: View {
     }
 }
 
+// MARK: - Source Pill
+
+struct SourcePill: View {
+    let source: MediaSource
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        if #available(macOS 26, *) {
+            Button(action: action) {
+                pillContent
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+                    .foregroundColor(isSelected ? .accentColor : .primary)
+            }
+            .buttonStyle(.plain)
+            .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isSelected ? Color.accentColor.opacity(0.6) : Color.clear, lineWidth: 1.5)
+            )
+        } else {
+            Button(action: action) {
+                pillContent
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .frame(maxWidth: .infinity)
+                    .background(isSelected ? Color.accentColor.opacity(0.15) : Color(nsColor: .controlBackgroundColor))
+                    .foregroundColor(isSelected ? .accentColor : .primary)
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(isSelected ? Color.accentColor.opacity(0.5) : Color(nsColor: .separatorColor), lineWidth: 0.5)
+                    )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var pillContent: some View {
+        HStack(spacing: 5) {
+            Image(systemName: source.sfSymbol)
+                .font(.caption)
+            Text(source.displayName)
+                .font(.subheadline)
+            if source.isPlaying {
+                Circle()
+                    .fill(Color.green)
+                    .frame(width: 6, height: 6)
+            }
+        }
+    }
+}
+
 // MARK: - Playback Tab
 
 struct PlaybackTab: View {
@@ -159,17 +304,46 @@ struct PlaybackTab: View {
         !manager.playTrackAlbum.isEmpty ? manager.playTrackAlbum : nowPlaying.album
     }
 
+    private var useAppleScriptControls: Bool {
+        manager.playTrackTitle.isEmpty && nowPlaying.selectedSource != nil
+    }
+
+    private var isPlaying: Bool {
+        if useAppleScriptControls {
+            return nowPlaying.selectedSource?.isPlaying ?? false
+        }
+        return manager.playPause == .play
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
                 // Now Playing
                 nowPlayingSection
 
+                // Source picker (only when 2+ sources)
+                if nowPlaying.hasMultipleSources {
+                    HStack(spacing: 8) {
+                        ForEach(nowPlaying.sources) { src in
+                            SourcePill(
+                                source: src,
+                                isSelected: nowPlaying.selectedSourceId == src.id
+                            ) {
+                                nowPlaying.selectedSourceId = src.id
+                            }
+                        }
+                    }
+                }
+
                 // Controls
                 VStack(spacing: 16) {
                     HStack(spacing: 24) {
                         Button {
-                            manager.sendPlaybackControl(.trackDown)
+                            if useAppleScriptControls, let id = nowPlaying.selectedSourceId {
+                                nowPlaying.sendPreviousTrack(for: id)
+                            } else {
+                                manager.sendPlaybackControl(.trackDown)
+                            }
                         } label: {
                             Image(systemName: "backward.fill")
                                 .font(.title2)
@@ -179,19 +353,25 @@ struct PlaybackTab: View {
                         .foregroundColor(.primary)
 
                         Button {
-                            if manager.playPause == .play {
+                            if useAppleScriptControls, let id = nowPlaying.selectedSourceId {
+                                nowPlaying.sendPlayPause(for: id)
+                            } else if manager.playPause == .play {
                                 manager.sendPlaybackControl(.pause)
                             } else {
                                 manager.sendPlaybackControl(.play)
                             }
                         } label: {
-                            Image(systemName: manager.playPause == .play ? "pause.circle.fill" : "play.circle.fill")
+                            Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
                                 .font(.system(size: 48))
                         }
                         .modifier(PlayButtonModifier())
 
                         Button {
-                            manager.sendPlaybackControl(.trackUp)
+                            if useAppleScriptControls, let id = nowPlaying.selectedSourceId {
+                                nowPlaying.sendNextTrack(for: id)
+                            } else {
+                                manager.sendPlaybackControl(.trackUp)
+                            }
                         } label: {
                             Image(systemName: "forward.fill")
                                 .font(.title2)
@@ -238,7 +418,6 @@ struct PlaybackTab: View {
     @ViewBuilder
     private var nowPlayingSection: some View {
         let hasTrack = !trackTitle.isEmpty
-        let isPlaying = manager.playPause == .play
 
         VStack(spacing: 8) {
             if isPlaying {
@@ -276,7 +455,7 @@ struct PlaybackTab: View {
                     }
                 }
 
-                if !nowPlaying.source.isEmpty && manager.playTrackTitle.isEmpty {
+                if !nowPlaying.source.isEmpty && manager.playTrackTitle.isEmpty && !nowPlaying.hasMultipleSources {
                     Text(nowPlaying.source)
                         .font(.caption2)
                         .foregroundColor(.secondary)
