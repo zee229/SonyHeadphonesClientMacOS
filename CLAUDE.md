@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Sony Headphones is a macOS-only client for Sony headphones using the MDR (Mobile Device Receiver) protocol. It consists of three main components: `libmdr` (protocol library), `client/` (legacy SDL3+ImGui GUI), and `client-swift/` (native SwiftUI GUI).
+Sony Headphones is a macOS-only client for Sony headphones using the MDR (Mobile Device Receiver) protocol. It consists of two main components: `libmdr` (protocol library) and `client-swift/` (native SwiftUI GUI).
 
 ## Build Commands
 
@@ -19,9 +19,6 @@ Sony Headphones is a macOS-only client for Sony headphones using the MDR (Mobile
 mkdir -p build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build . --target mdr mdr_PlatformMacOS
-
-# Build legacy SDL3+ImGui client
-cmake --build . --target SonyHeadphonesClient
 
 # Alternatively, open client-swift/SonyHeadphonesClient.xcodeproj in Xcode and build (Cmd+R).
 
@@ -54,8 +51,6 @@ There are no tests in this project.
   - `include/mdr/Generated/` — Auto-generated enum converters, traits
   - `src/Generated/` — Auto-generated serialization and validation code
 
-- **`client/`** — Legacy GUI application using SDL3 + Dear ImGui. Single main UI file `Client.cpp` (~52K). Entry point in `SDLMain.cpp`.
-
 - **`client-swift/`** — Native SwiftUI GUI application ("Sony Headphones"). Xcode project at `SonyHeadphonesClient.xcodeproj`. Uses a bridging header to call the C API from `libmdr`. Key files:
   - `App/SonyHeadphonesClientApp.swift` — `@main` entry point, `WindowGroup`, `Settings` scene (Cmd+,), `AppTheme` enum, theme management via `NSApp.appearance`
   - `App/ContentView.swift` — State-machine router based on connection state
@@ -76,7 +71,7 @@ There are no tests in this project.
 
 ### Platform abstraction
 
-Both `libmdr` and `client` have macOS-specific code under `Platform/MacOS/` directories. The platform layer provides Bluetooth transport (CoreBluetooth) and platform integration.
+`libmdr` has macOS-specific code under `Platform/MacOS/`. The platform layer provides Bluetooth transport (CoreBluetooth) and platform integration.
 
 ### Code generation (tooling/)
 
@@ -88,7 +83,7 @@ The `tooling/` directory contains LLVM/libclang-based AST walkers that generate 
 - `tooling_ValidationCodegen` — Generates field validation code from `CODEGEN` comments
 - `tooling_TraitsCodegen` — Generates type traits headers
 
-### Payload struct conventions (AGENTS.md)
+### Payload struct conventions
 
 Payload structs in `libmdr`:
 - First field is always `Command command{Command::...}`
@@ -98,21 +93,17 @@ Payload structs in `libmdr`:
 - Validation hints via `CODEGEN EnumRange`, `CODEGEN Range`, `CODEGEN Field` comments above fields
 - Use `MDR_CODEGEN_IGNORE_SERIALIZATION` / `MDR_CODEGEN_IGNORE_VALIDATION` to exclude from codegen
 
-### Dependencies (all via CMake FetchContent)
+### Dependencies (via CMake FetchContent)
 
 - **fmt** (12.1.0) — String formatting
-- **SDL3** (3.2.26) — Windowing/rendering
-- **Dear ImGui** (1.92.4) — GUI
 
 ## UI Theme
 
 **SwiftUI client** (`client-swift/`): Supports System/Light/Dark theme switching via `NSApp.appearance` (persisted in `@AppStorage("appTheme")`). On macOS 26 (Tahoe), uses Liquid Glass design language (`glassEffect` API) for cards, pills, badges, and buttons with `@available(macOS 26, *)` checks — falls back to manual background/cornerRadius/stroke styling on macOS 14/15. Shared modifiers: `GlassCardModifier`, `ModePillModifier` (in `SoundTab.swift`), `BadgeModifier` (in `HeaderView.swift`), `DeviceCardModifier` (in `DevicesTab.swift`), `DiscoveryRowModifier` (in `DiscoveryView.swift`), `PlayButtonModifier`, `SourcePill` (in `PlaybackTab.swift`). Battery progress bars use context-sensitive colors (green/orange/red).
 
-**Legacy ImGui client** (`client/`): Uses a custom macOS Sequoia dark mode theme defined in `SetupMacOSStyle()` in `SDLMain.cpp`. Accent color is macOS system blue `#0A84FF`.
-
 ## CI
 
-GitHub Actions workflow (`.github/workflows/cmake.yml`): builds both legacy ImGui client (universal binary) and SwiftUI client (app + DMG) on every push/PR to `main` and `macos-only`. Uploads DMG and zip as artifacts.
+GitHub Actions workflow (`.github/workflows/cmake.yml`): builds the SwiftUI client (app + DMG) on every push/PR to `main` and `macos-only`. Uploads DMG as artifact.
 
 ## Key Conventions
 

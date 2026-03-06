@@ -116,14 +116,6 @@ The app bundle is created at `build/Sony Headphones.app`.
 2. Open `client-swift/SonyHeadphonesClient.xcodeproj`
 3. Build & Run (Cmd+R)
 
-### Legacy ImGui Client
-
-```bash
-cd build
-cmake --build . --target SonyHeadphonesClient
-open client/SonyHeadphonesClient.app
-```
-
 ## Architecture
 
 ```
@@ -140,7 +132,6 @@ client-swift/        SwiftUI app ("Sony Headphones")
   Bridge/              Objective-C bridging header
   Resources/           Info.plist, AppIcon, DMG background
 
-client/              Legacy SDL3 + Dear ImGui client
 tooling/             LLVM-based codegen tools (not needed for building)
 build_app.sh         CLI build script (libmdr + SwiftUI → .app)
 build_dmg.sh         DMG installer packaging script

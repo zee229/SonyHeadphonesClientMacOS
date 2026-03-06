@@ -11,31 +11,6 @@ env:
   BUILD_TYPE: RelWithDebInfo
 
 jobs:
-  build-legacy:
-    name: Build Legacy Client (Universal)
-    runs-on: macos-latest
-
-    steps:
-    - uses: actions/checkout@v3
-      with:
-        submodules: true
-
-    - name: Configure CMake
-      run: cmake -B build -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
-
-    - name: Build
-      run: cmake --build build --config $BUILD_TYPE --target SonyHeadphonesClient
-
-    - name: Pack
-      working-directory: build/client
-      run: zip -r SonyHeadphonesClient.zip SonyHeadphonesClient.app
-
-    - name: Upload Build Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: SonyHeadphonesClient-legacy-macos-universal
-        path: build/client/SonyHeadphonesClient.zip
-
   build-swift:
     name: Build SwiftUI Client
     runs-on: macos-latest

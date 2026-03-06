@@ -28,7 +28,6 @@ add_compile_definitions("MDR_PLATFORM_${MDR_PLATFORM_OS}")
 
 add_subdirectory(contrib)
 add_subdirectory(libmdr)
-add_subdirectory(client)
 
 # NOTE: Codegen is NOT automatically run when building the project itself.
 # Should you make changes to the sources, see 'tooling/README.md' for instructions on how to run the codegen.
