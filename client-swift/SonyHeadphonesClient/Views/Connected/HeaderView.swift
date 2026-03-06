@@ -5,37 +5,14 @@ struct HeaderView: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            // Top bar: model name menu + badges
-            HStack {
-                Menu {
-                    Button(role: .destructive) {
-                        manager.disconnect()
-                    } label: {
-                        Label("Disconnect", systemImage: "link.badge.plus")
-                    }
-                    if manager.supports(.powerOff) {
-                        Button(role: .destructive) {
-                            manager.shutdown()
-                        } label: {
-                            Label("Shutdown", systemImage: "power")
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.down")
-                            .font(.caption2)
-                        Text(manager.modelName)
-                            .fontWeight(.medium)
-                    }
+            // Top bar: model name + badges + actions
+            HStack(spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: "headphones")
+                        .foregroundColor(.accentColor)
+                    Text(manager.modelName)
+                        .fontWeight(.medium)
                 }
-                .menuStyle(.borderlessButton)
-
-                if !manager.isReady {
-                    ProgressView()
-                        .controlSize(.small)
-                }
-
-                Spacer()
 
                 // Badges
                 HStack(spacing: 6) {
@@ -45,6 +22,31 @@ struct HeaderView: View {
                     if manager.upscalingEnabled {
                         BadgeView(text: manager.upscalingType.displayName)
                     }
+                }
+
+                Spacer()
+
+                // Action buttons
+                Button {
+                    manager.disconnect()
+                } label: {
+                    Image(systemName: "xmark.circle")
+                        .font(.system(size: 16))
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Disconnect")
+
+                if manager.supports(.powerOff) {
+                    Button {
+                        manager.shutdown()
+                    } label: {
+                        Image(systemName: "power.circle")
+                            .font(.system(size: 16))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Shutdown headphones")
                 }
             }
             .padding(.horizontal, 12)
