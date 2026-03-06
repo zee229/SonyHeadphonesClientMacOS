@@ -2,7 +2,7 @@ import SwiftUI
 
 struct DevicesTab: View {
     @EnvironmentObject var manager: HeadphonesManager
-    @State private var selectedMac: String?
+    @State private var expandedMac: String?
 
     private var supportDeviceMgmt: Bool {
         manager.supports(.pairingDeviceManagementClassicBT)
@@ -12,26 +12,35 @@ struct DevicesTab: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 20) {
                 if !supportDeviceMgmt {
-                    Text("Please enable \"Connect to 2 devices simultaneously\" in System settings to manage devices.")
-                        .foregroundColor(.secondary)
-                        .font(.callout)
+                    HStack(spacing: 8) {
+                        Image(systemName: "info.circle")
+                            .foregroundColor(.yellow)
+                        Text("Enable \"Connect to 2 devices simultaneously\" in System settings to manage devices.")
+                            .font(.callout)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(12)
+                    .background(Color.yellow.opacity(0.08))
+                    .cornerRadius(8)
                 }
 
                 let connected = manager.pairedDevices.filter(\.connected)
                 let paired = manager.pairedDevices.filter { !$0.connected }
 
                 if !connected.isEmpty {
-                    Section {
-                        Text("Connected")
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Connected", systemImage: "link")
                             .font(.headline)
+                            .foregroundColor(.primary)
+
                         ForEach(connected) { device in
-                            DeviceRow(
+                            DeviceCard(
                                 device: device,
-                                isSelected: selectedMac == device.id,
+                                isExpanded: expandedMac == device.id,
                                 isMultipoint: device.id == manager.multipointDeviceMac,
-                                onSelect: { toggleSelection(device.id) },
+                                onTap: { toggleExpanded(device.id) },
                                 onDisconnect: { manager.disconnectPairedDevice(device.id) },
                                 onConnect: nil,
                                 onUnpair: { manager.unpairDevice(device.id) },
@@ -42,15 +51,17 @@ struct DevicesTab: View {
                 }
 
                 if !paired.isEmpty {
-                    Section {
-                        Text("Paired")
+                    VStack(alignment: .leading, spacing: 8) {
+                        Label("Paired", systemImage: "dot.radiowaves.right")
                             .font(.headline)
+                            .foregroundColor(.primary)
+
                         ForEach(paired) { device in
-                            DeviceRow(
+                            DeviceCard(
                                 device: device,
-                                isSelected: selectedMac == device.id,
+                                isExpanded: expandedMac == device.id,
                                 isMultipoint: false,
-                                onSelect: { toggleSelection(device.id) },
+                                onTap: { toggleExpanded(device.id) },
                                 onDisconnect: nil,
                                 onConnect: { manager.connectPairedDevice(device.id) },
                                 onUnpair: { manager.unpairDevice(device.id) },
@@ -60,94 +71,179 @@ struct DevicesTab: View {
                     }
                 }
 
-                Divider()
+                if connected.isEmpty && paired.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "laptopcomputer.slash")
+                            .font(.system(size: 32))
+                            .foregroundColor(.secondary)
+                        Text("No paired devices")
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
+                }
 
                 // Pairing Mode
-                if manager.pairingMode {
-                    VStack(spacing: 8) {
-                        Text("Pairing...")
-                            .font(.callout)
-                        ProgressView()
+                VStack(spacing: 8) {
+                    if manager.pairingMode {
+                        HStack(spacing: 12) {
+                            ProgressView()
+                                .controlSize(.small)
+                            Text("Searching for devices...")
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Button("Stop") {
+                                manager.pairingMode = false
+                            }
+                            .buttonStyle(.bordered)
                             .controlSize(.small)
-                        Button("Stop") {
-                            manager.pairingMode = false
+                        }
+                        .padding(12)
+                        .background(Color.accentColor.opacity(0.08))
+                        .cornerRadius(8)
+                    } else {
+                        Button {
+                            manager.pairingMode = true
+                        } label: {
+                            Label("Enter Pairing Mode", systemImage: "antenna.radiowaves.left.and.right")
+                                .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.bordered)
                     }
-                    .frame(maxWidth: .infinity)
-                } else {
-                    Button {
-                        manager.pairingMode = true
-                    } label: {
-                        Label("Enter Pairing Mode", systemImage: "antenna.radiowaves.left.and.right")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                }
 
-                Text("For TWS (Earbuds) devices, you may need to take both of your headphones out from your case to enter Pairing Mode.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    Text("For TWS (Earbuds) devices, you may need to take both of your headphones out from your case to enter Pairing Mode.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
             .padding()
             .disabled(!supportDeviceMgmt)
         }
     }
 
-    private func toggleSelection(_ mac: String) {
-        selectedMac = selectedMac == mac ? nil : mac
+    private func toggleExpanded(_ mac: String) {
+        withAnimation(.easeInOut(duration: 0.15)) {
+            expandedMac = expandedMac == mac ? nil : mac
+        }
     }
 }
 
-struct DeviceRow: View {
+private func deviceIcon(for name: String) -> String {
+    let lower = name.lowercased()
+    if lower.contains("iphone") { return "iphone" }
+    if lower.contains("ipad") { return "ipad" }
+    if lower.contains("macbook") { return "laptopcomputer" }
+    if lower.contains("mac") { return "desktopcomputer" }
+    if lower.contains("apple") { return "apple.logo" }
+    if lower.contains("watch") { return "applewatch" }
+    if lower.contains("tv") { return "appletv" }
+    return "desktopcomputer"
+}
+
+struct DeviceCard: View {
     let device: PairedDevice
-    let isSelected: Bool
+    let isExpanded: Bool
     let isMultipoint: Bool
-    let onSelect: () -> Void
+    let onTap: () -> Void
     let onDisconnect: (() -> Void)?
     let onConnect: (() -> Void)?
     let onUnpair: () -> Void
     let onSetMultipoint: (() -> Void)?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Button(action: onSelect) {
-                HStack {
-                    if isMultipoint {
-                        Image(systemName: "speaker.wave.1")
-                            .foregroundColor(.accentColor)
+        VStack(spacing: 0) {
+            // Main row
+            Button(action: onTap) {
+                HStack(spacing: 12) {
+                    Image(systemName: deviceIcon(for: device.name))
+                        .font(.system(size: 20))
+                        .foregroundColor(device.connected ? .accentColor : .secondary)
+                        .frame(width: 28)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(device.name)
+                            .font(.body)
+                            .foregroundColor(.primary)
+                        HStack(spacing: 6) {
+                            if device.connected {
+                                Circle()
+                                    .fill(Color.green)
+                                    .frame(width: 6, height: 6)
+                                Text("Connected")
+                                    .font(.caption)
+                                    .foregroundColor(.green)
+                            } else {
+                                Text("Not connected")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            if isMultipoint {
+                                Text("Audio")
+                                    .font(.caption2)
+                                    .fontWeight(.medium)
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 1)
+                                    .background(Color.accentColor.opacity(0.2))
+                                    .foregroundColor(.accentColor)
+                                    .cornerRadius(3)
+                            }
+                        }
                     }
-                    Text(device.name)
+
                     Spacer()
-                    if isSelected {
-                        Image(systemName: "checkmark")
-                            .foregroundColor(.accentColor)
-                    }
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
                 }
+                .padding(10)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
-            if isSelected {
+            // Expanded actions
+            if isExpanded {
                 Divider()
+                    .padding(.horizontal, 10)
+
                 HStack(spacing: 8) {
-                    if let onDisconnect {
-                        Button("Disconnect", action: onDisconnect)
-                            .buttonStyle(.bordered)
-                    }
                     if let onConnect {
-                        Button("Connect", action: onConnect)
-                            .buttonStyle(.borderedProminent)
+                        Button(action: onConnect) {
+                            Label("Connect", systemImage: "link")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                    }
+                    if let onDisconnect {
+                        Button(action: onDisconnect) {
+                            Label("Disconnect", systemImage: "link.badge.plus")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
                     }
                     if let onSetMultipoint {
-                        Button("Set Audio", action: onSetMultipoint)
-                            .buttonStyle(.bordered)
-                    }
-                    Button("Unpair", role: .destructive, action: onUnpair)
+                        Button(action: onSetMultipoint) {
+                            Label("Set Audio", systemImage: "speaker.wave.2")
+                        }
                         .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+                    Spacer()
+                    Button(role: .destructive, action: onUnpair) {
+                        Label("Unpair", systemImage: "trash")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
                 }
+                .padding(10)
             }
         }
-        .padding(.vertical, 4)
+        .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+        .cornerRadius(8)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
+        )
     }
 }
