@@ -98,6 +98,7 @@ struct HeaderView: View {
             .padding(.bottom, 8)
         }
         .background(Color(nsColor: .windowBackgroundColor))
+        .transaction { $0.animation = nil }
     }
 }
 

@@ -282,6 +282,7 @@ struct ModePill: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 7)
                 .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
                 .foregroundColor(isSelected ? .accentColor : .primary)
             }
             .buttonStyle(.plain)
