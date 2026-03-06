@@ -8,9 +8,6 @@
 #include <SDL3/SDL_main.h>
 
 #include "Platform/Platform.hpp"
-#ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-#endif
 
 #include "Fonts/PlexSansIcon.h"
 // Implemented by Client.cpp
@@ -72,10 +69,6 @@ void mainLoop()
         ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), gRenderer);
         SDL_RenderPresent(gRenderer);
     }
-#ifdef EMSCRIPTEN
-    if (gShouldClose)
-        emscripten_cancel_main_loop();
-#endif
 }
 
 int main(int, char**)
@@ -129,12 +122,8 @@ int main(int, char**)
     }
     // Main loop
 
-#ifdef __EMSCRIPTEN__
-    emscripten_set_main_loop(mainLoop, 0, 1);
-#else
     while (!gShouldClose)
         mainLoop();
-#endif
 
     // Cleanup
     {

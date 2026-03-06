@@ -5,13 +5,6 @@ file(
 )
 
 find_package(Clang)
-if (NOT Clang_FOUND)
-    # Windows LLVM installer doesn't come with FindClang.cmake???
-    # Whatever. As per tooling README, do it our own way.
-    find_path(LLVM_DIR clang-c)
-    message(STATUS "LLVM_DIR=${LLVM_DIR}")
-    link_directories("${LLVM_DIR}/../lib")
-endif ()
 include(FetchContent)
 FetchContent_MakeAvailable(fmt)
 
