@@ -4,12 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-SonyHeadphonesClient is a macOS-only client for Sony headphones using the MDR (Mobile Device Receiver) protocol. It consists of three main components: `libmdr` (protocol library), `client/` (legacy SDL3+ImGui GUI), and `client-swift/` (native SwiftUI GUI).
+Sony Headphones is a macOS-only client for Sony headphones using the MDR (Mobile Device Receiver) protocol. It consists of three main components: `libmdr` (protocol library), `client/` (legacy SDL3+ImGui GUI), and `client-swift/` (native SwiftUI GUI).
 
 ## Build Commands
 
 ```bash
-# Build libmdr (required before SwiftUI app)
+# Quick build (recommended) — builds libmdr + SwiftUI app into .app bundle
+./build_app.sh
+
+# Build DMG installer (calls build_app.sh if needed)
+./build_dmg.sh
+
+# Manual: build libmdr only
 mkdir -p build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
 cmake --build . --target mdr mdr_PlatformMacOS
@@ -17,18 +23,6 @@ cmake --build . --target mdr mdr_PlatformMacOS
 # Build legacy SDL3+ImGui client
 cmake --build . --target SonyHeadphonesClient
 
-# Build SwiftUI client (CLI — no Xcode required)
-# 1. First build libmdr above
-# 2. Run swiftc with all source files:
-swiftc -target arm64-apple-macosx14.0 -sdk $(xcrun --show-sdk-path) \
-  -import-objc-header client-swift/SonyHeadphonesClient/Bridge/SonyHeadphonesClient-Bridging-Header.h \
-  -I libmdr/include \
-  -L build/libmdr/src -L build/libmdr/src/Platform/MacOS -L build/_deps/fmt-build \
-  -lmdr -lmdr_PlatformMacOS -lfmt -lstdc++ \
-  -framework SwiftUI -framework AppKit -framework CoreBluetooth -framework IOBluetooth \
-  -o build/SonyHeadphonesClientSwift.app/Contents/MacOS/SonyHeadphonesClient \
-  $(find client-swift -name '*.swift')
-# 3. open build/SonyHeadphonesClientSwift.app
 # Alternatively, open client-swift/SonyHeadphonesClient.xcodeproj in Xcode and build (Cmd+R).
 
 # Universal binary (arm64 + x86_64)
@@ -42,6 +36,11 @@ cmake .. -DMDR_BUILD_WITH_ASAN=ON
 ```
 
 There are no tests in this project.
+
+## Build Scripts
+
+- **`build_app.sh`** — One-step CLI build: cmake libmdr → swiftc SwiftUI app → assemble .app bundle with Info.plist, icon, and resources. Output: `build/Sony Headphones.app`
+- **`build_dmg.sh`** — Creates styled DMG installer with custom background, positioned icons, white Finder labels. Calls `build_app.sh` if app not already built. Output: `build/SonyHeadphones-{version}.dmg`
 
 ## Architecture
 
@@ -57,7 +56,7 @@ There are no tests in this project.
 
 - **`client/`** — Legacy GUI application using SDL3 + Dear ImGui. Single main UI file `Client.cpp` (~52K). Entry point in `SDLMain.cpp`.
 
-- **`client-swift/`** — Native SwiftUI GUI application. Xcode project at `SonyHeadphonesClient.xcodeproj`. Uses a bridging header to call the C API from `libmdr`. Key files:
+- **`client-swift/`** — Native SwiftUI GUI application ("Sony Headphones"). Xcode project at `SonyHeadphonesClient.xcodeproj`. Uses a bridging header to call the C API from `libmdr`. Key files:
   - `App/SonyHeadphonesClientApp.swift` — `@main` entry point, `WindowGroup`, `Settings` scene (Cmd+,), `AppTheme` enum, theme management via `NSApp.appearance`
   - `App/ContentView.swift` — State-machine router based on connection state
   - `Models/HeadphonesManager.swift` — Central `@MainActor ObservableObject` with 60Hz poll loop
@@ -68,6 +67,10 @@ There are no tests in this project.
   - `Views/Connected/PlaybackTab.swift` — Playback tab with `NowPlayingMonitor` (multi-source AppleScript polling), `MediaSource` model, `SourcePill` view, and smart routing (AppleScript for app-targeted controls, AVRCP fallback). `AudioVisualizerView` animated bars.
   - `Views/MenuBar/MenuBarPopoverView.swift` — Menu bar popover: battery, NC controls, playback with multi-source pills (`MenuBarSourcePill`), volume. Uses `MenuBarExtra` scene with `.window` style.
   - `Bridge/SonyHeadphonesClient-Bridging-Header.h` — Imports all C API headers
+  - `Resources/Info.plist` — Bundle config (name: "Sony Headphones", icon, Bluetooth usage). Contains `$(EXECUTABLE_NAME)` / `$(PRODUCT_BUNDLE_IDENTIFIER)` Xcode variables resolved by `build_app.sh` at build time.
+  - `Resources/AppIcon.icns` — App icon for CLI builds (all sizes 16-512@2x)
+  - `Resources/Assets.xcassets/AppIcon.appiconset/` — App icon for Xcode builds
+  - `Resources/dmg-background.png`, `dmg-background@2x.png` — DMG installer background
 
 - **`libmdr/include/mdr-c/HeadphonesAccess.h`** — C shim layer exposing all `MDRProperty` fields as C getter/setter functions. Used by the SwiftUI client via bridging header. Implementation in `libmdr/src/HeadphonesAccess.cpp`.
 
@@ -103,9 +106,13 @@ Payload structs in `libmdr`:
 
 ## UI Theme
 
-**SwiftUI client** (`client-swift/`): Supports System/Light/Dark theme switching via `NSApp.appearance` (persisted in `@AppStorage("appTheme")`). On macOS 26 (Tahoe), uses Liquid Glass design language (`glassEffect` API) for cards, pills, badges, and buttons with `@available(macOS 26, *)` checks — falls back to manual background/cornerRadius/stroke styling on macOS 14/15. Shared modifiers: `GlassCardModifier`, `ModePillModifier` (in `SoundTab.swift`), `BadgeModifier` (in `HeaderView.swift`), `DeviceCardModifier` (in `DevicesTab.swift`), `DiscoveryRowModifier` (in `DiscoveryView.swift`), `PlayButtonModifier` (in `PlaybackTab.swift`). Battery progress bars use context-sensitive colors (green/orange/red).
+**SwiftUI client** (`client-swift/`): Supports System/Light/Dark theme switching via `NSApp.appearance` (persisted in `@AppStorage("appTheme")`). On macOS 26 (Tahoe), uses Liquid Glass design language (`glassEffect` API) for cards, pills, badges, and buttons with `@available(macOS 26, *)` checks — falls back to manual background/cornerRadius/stroke styling on macOS 14/15. Shared modifiers: `GlassCardModifier`, `ModePillModifier` (in `SoundTab.swift`), `BadgeModifier` (in `HeaderView.swift`), `DeviceCardModifier` (in `DevicesTab.swift`), `DiscoveryRowModifier` (in `DiscoveryView.swift`), `PlayButtonModifier`, `SourcePill` (in `PlaybackTab.swift`). Battery progress bars use context-sensitive colors (green/orange/red).
 
 **Legacy ImGui client** (`client/`): Uses a custom macOS Sequoia dark mode theme defined in `SetupMacOSStyle()` in `SDLMain.cpp`. Accent color is macOS system blue `#0A84FF`.
+
+## CI
+
+GitHub Actions workflow (`.github/workflows/cmake.yml`): builds both legacy ImGui client (universal binary) and SwiftUI client (app + DMG) on every push/PR to `main` and `macos-only`. Uploads DMG and zip as artifacts.
 
 ## Key Conventions
 
@@ -113,5 +120,5 @@ Payload structs in `libmdr`:
 - macOS 14+ deployment target, macOS 26+ for Liquid Glass
 - macOS only — `MDR_PLATFORM_OS` is always `MACOS`
 - Exceptions used for validation failures and `MDR_CHECK`s
-- CI targets `macos-only` and `main` branches
 - `.clang-format` and `.clang-tidy` configs present at repo root
+- App name: "Sony Headphones", bundle ID: `com.mos9527.SonyHeadphonesClient`

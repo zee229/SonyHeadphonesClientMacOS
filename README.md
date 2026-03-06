@@ -1,4 +1,4 @@
-# Sony Headphones Client for macOS
+# Sony Headphones for macOS
 
 A native macOS app to control Sony wireless headphones — noise cancelling, EQ, touch controls, and more — without the Sony Sound Connect mobile app.
 
@@ -15,10 +15,11 @@ Built with SwiftUI and a custom reverse-engineered implementation of Sony's prop
 - **Equalizer** — 5-band and 10-band EQ with visual sliders, preset selection, Clear Bass
 - **DSEE** — toggle DSEE HX / DSEE HX AI upscaling
 - **Speak to Chat** — sensitivity and timeout configuration
-- **Playback** — volume, play/pause, track skip
+- **Playback** — volume, play/pause, track skip with multi-source awareness (Spotify, Apple Music)
 - **Touch Controls** — assign functions to left/right touch sensors
 - **Device Management** — multipoint switching, pairing mode, paired device list
 - **Battery** — single, left/right, and case battery levels with charging status
+- **Menu Bar Widget** — quick access to battery, NC mode, playback controls from the menu bar
 - **System** — auto power off, voice guidance volume, head gesture, wearing detection pause
 - **About** — model info, firmware version, codec indicator
 
@@ -76,64 +77,51 @@ Older devices use the legacy V1 protocol, which is **not implemented**:
 
 | macOS Version | Supported |
 |---------------|-----------|
-| macOS 26 (Tahoe) | Yes |
+| macOS 26 (Tahoe) | Yes (Liquid Glass UI) |
 | macOS 15 (Sequoia) | Yes |
 | macOS 14 (Sonoma) | Yes (minimum) |
-| macOS 13 (Ventura) | No |
-| macOS 12 (Monterey) | No |
+| macOS 13 and earlier | No |
 
-The app targets macOS 14.0+ and uses standard SwiftUI APIs. On macOS 26 Tahoe, the UI automatically adopts the new Liquid Glass appearance.
+## Installation
 
-## Building
+Download the latest `.dmg` from [Releases](../../releases), open it, and drag **Sony Headphones** to your Applications folder.
+
+## Building from Source
 
 ### Prerequisites
 
 - Xcode Command Line Tools (or Xcode)
 - CMake 3.20+
-- C++20 compiler (Apple Clang from Xcode)
 
-### Build libmdr (protocol library)
+### Quick Build
 
 ```bash
-mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
-cmake --build . --target mdr mdr_PlatformMacOS
+# Build the app (libmdr + SwiftUI → .app bundle)
+./build_app.sh
+
+# Or build a DMG installer
+./build_dmg.sh
 ```
 
-### Build the SwiftUI app
+The app bundle is created at `build/Sony Headphones.app`.
 
-**With Xcode:**
+### With Xcode
 
-1. Build libmdr first (above)
+1. Build libmdr first:
+   ```bash
+   mkdir -p build && cd build
+   cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
+   cmake --build . --target mdr mdr_PlatformMacOS
+   ```
 2. Open `client-swift/SonyHeadphonesClient.xcodeproj`
 3. Build & Run (Cmd+R)
 
-The Xcode project includes a pre-build script that also builds libmdr automatically.
-
-**Without Xcode (Command Line Tools only):**
+### Legacy ImGui Client
 
 ```bash
-SDK=$(xcrun --show-sdk-path)
-PROJ="$(pwd)/.."
-BRIDGE="$PROJ/client-swift/SonyHeadphonesClient/Bridge/SonyHeadphonesClient-Bridging-Header.h"
-
-find "$PROJ/client-swift/SonyHeadphonesClient" -name "*.swift" -print0 | xargs -0 \
-swiftc -sdk "$SDK" -target arm64-apple-macosx14.0 \
-  -import-objc-header "$BRIDGE" \
-  -I "$PROJ/libmdr/include" \
-  -L "$PROJ/build/libmdr/src" \
-  -L "$PROJ/build/libmdr/src/Platform/MacOS" \
-  -L "$PROJ/build/_deps/fmt-build" \
-  -lmdr -lfmt -lmdr_PlatformMacOS \
-  -framework IOBluetooth -framework Foundation -framework AppKit -framework SwiftUI \
-  -lc++ -o SonyHeadphonesClient
-```
-
-### Universal binary (arm64 + x86_64)
-
-```bash
-cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
-cmake --build . --target mdr mdr_PlatformMacOS
+cd build
+cmake --build . --target SonyHeadphonesClient
+open client/SonyHeadphonesClient.app
 ```
 
 ## Architecture
@@ -145,14 +133,17 @@ libmdr/              Protocol library (C++20, static)
   src/                 Protocol implementation, codegen output
   Platform/MacOS/      CoreBluetooth transport
 
-client-swift/        SwiftUI app
+client-swift/        SwiftUI app ("Sony Headphones")
   App/                 Entry point, content view router
-  Models/              HeadphonesManager (ObservableObject), enums, state types
+  Models/              HeadphonesManager, enums, state types
   Views/               SwiftUI views by screen (Discovery, Connected, etc.)
   Bridge/              Objective-C bridging header
+  Resources/           Info.plist, AppIcon, DMG background
 
-docs/device-support/ Per-device feature compatibility tables
+client/              Legacy SDL3 + Dear ImGui client
 tooling/             LLVM-based codegen tools (not needed for building)
+build_app.sh         CLI build script (libmdr + SwiftUI → .app)
+build_dmg.sh         DMG installer packaging script
 ```
 
 The Swift app communicates with `libmdr` through a C API shim layer (`HeadphonesAccess.h`). A 60Hz timer poll loop reads device state and updates `@Published` properties, triggering SwiftUI view updates.
