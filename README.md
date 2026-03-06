@@ -76,12 +76,13 @@ Older devices use the legacy V1 protocol, which is **not implemented**:
 
 | macOS Version | Supported |
 |---------------|-----------|
+| macOS 26 (Tahoe) | Yes |
 | macOS 15 (Sequoia) | Yes |
-| macOS 14 (Sonoma) | Yes |
+| macOS 14 (Sonoma) | Yes (minimum) |
 | macOS 13 (Ventura) | No |
 | macOS 12 (Monterey) | No |
 
-The app uses SwiftUI features and system APIs available from macOS 14.0+.
+The app targets macOS 14.0+ and uses standard SwiftUI APIs. On macOS 26 Tahoe, the UI automatically adopts the new Liquid Glass appearance.
 
 ## Building
 
