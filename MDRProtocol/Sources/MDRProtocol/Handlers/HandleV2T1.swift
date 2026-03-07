@@ -442,6 +442,8 @@ extension MDRHeadphones {
             let bands = res.bands.value
             switch bands.count {
             case 0:
+                eqClearBass.overwrite(0)
+                eqConfig.overwrite([])
                 return MDREvent.equalizerParam.rawValue
             case 6:
                 eqClearBass.overwrite(Int(bands[0]) - 10)
