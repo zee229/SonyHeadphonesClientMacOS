@@ -261,7 +261,6 @@ final class HeadphonesManager: ObservableObject {
 
     // MARK: - Device Management
     func setMultipointDeviceMac(_ mac: String) {
-        multipointDeviceMac = mac
         headphones?.multipointDeviceMac.desired = mac
     }
 
@@ -513,7 +512,7 @@ final class HeadphonesManager: ObservableObject {
         if pairingMode != newPairing { pairingMode = newPairing }
 
         // Multipoint Mac
-        let newMPMac = hp.multipointDeviceMac.current
+        let newMPMac = hp.multipointDeviceMac.desired
         if multipointDeviceMac != newMPMac { multipointDeviceMac = newMPMac }
 
         // Paired Devices

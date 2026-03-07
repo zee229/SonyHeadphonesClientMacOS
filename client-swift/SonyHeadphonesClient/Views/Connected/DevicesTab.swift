@@ -150,6 +150,8 @@ struct DeviceCard: View {
     let onUnpair: () -> Void
     let onSetMultipoint: (() -> Void)?
 
+    @State private var pendingAction: String?
+
     var body: some View {
         VStack(spacing: 0) {
             // Main row
@@ -165,7 +167,13 @@ struct DeviceCard: View {
                             .font(.body)
                             .foregroundColor(.primary)
                         HStack(spacing: 6) {
-                            if device.connected {
+                            if pendingAction != nil {
+                                ProgressView()
+                                    .controlSize(.mini)
+                                Text(pendingAction == "connect" ? "Connecting..." : "Disconnecting...")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            } else if device.connected {
                                 Circle()
                                     .fill(Color.green)
                                     .frame(width: 6, height: 6)
@@ -209,18 +217,26 @@ struct DeviceCard: View {
 
                 HStack(spacing: 8) {
                     if let onConnect {
-                        Button(action: onConnect) {
+                        Button {
+                            pendingAction = "connect"
+                            onConnect()
+                        } label: {
                             Label("Connect", systemImage: "link")
                         }
                         .buttonStyle(.borderedProminent)
                         .controlSize(.small)
+                        .disabled(pendingAction != nil)
                     }
                     if let onDisconnect {
-                        Button(action: onDisconnect) {
+                        Button {
+                            pendingAction = "disconnect"
+                            onDisconnect()
+                        } label: {
                             Label("Disconnect", systemImage: "link.badge.plus")
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
+                        .disabled(pendingAction != nil)
                     }
                     if let onSetMultipoint {
                         Button(action: onSetMultipoint) {
@@ -240,6 +256,9 @@ struct DeviceCard: View {
             }
         }
         .modifier(DeviceCardModifier())
+        .onChange(of: device.connected) { _, _ in
+            pendingAction = nil
+        }
     }
 }
 
