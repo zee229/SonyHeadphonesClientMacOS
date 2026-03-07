@@ -79,6 +79,11 @@ struct SonyHeadphonesClientApp: App {
 
     private func applyTheme() {
         NSApp.appearance = AppTheme(rawValue: appTheme)?.nsAppearance
+        DispatchQueue.main.async {
+            for window in NSApp.windows {
+                window.viewsNeedDisplay = true
+            }
+        }
     }
 
     private func relaunchApp() {

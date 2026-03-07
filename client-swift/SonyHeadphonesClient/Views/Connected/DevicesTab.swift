@@ -250,11 +250,11 @@ struct DeviceCardModifier: ViewModifier {
                 .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 8))
         } else {
             content
-                .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+                .background(Color(.controlBackgroundColor).opacity(0.5))
                 .cornerRadius(8)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
+                        .stroke(Color(.separatorColor), lineWidth: 0.5)
                 )
         }
     }

@@ -213,11 +213,11 @@ struct DiscoveryRowModifier: ViewModifier {
                 )
         } else {
             content
-                .background(isSelected ? Color.accentColor.opacity(0.15) : Color(nsColor: .controlBackgroundColor).opacity(0.5))
+                .background(isSelected ? Color.accentColor.opacity(0.15) : Color(.controlBackgroundColor).opacity(0.5))
                 .cornerRadius(8)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(isSelected ? Color.accentColor.opacity(0.4) : Color(nsColor: .separatorColor).opacity(0.5), lineWidth: 0.5)
+                        .stroke(isSelected ? Color.accentColor.opacity(0.4) : Color(.separatorColor).opacity(0.5), lineWidth: 0.5)
                 )
         }
     }

@@ -97,7 +97,7 @@ struct HeaderView: View {
             .padding(.horizontal, 12)
             .padding(.bottom, 8)
         }
-        .background(Color(nsColor: .windowBackgroundColor))
+        .background(Color(.windowBackgroundColor))
         .transaction { $0.animation = nil }
     }
 }
@@ -140,7 +140,7 @@ struct BatteryRow: View {
                 .font(.caption)
                 .frame(width: 80, alignment: .leading)
             ProgressView(value: Double(battery.level), total: 100)
-                .tint(batteryColor)
+                .tint(.green)
                 .frame(maxWidth: .infinity)
             if !battery.charging.displayName.isEmpty {
                 Text(battery.charging.displayName)
@@ -148,11 +148,5 @@ struct BatteryRow: View {
                     .foregroundColor(.secondary)
             }
         }
-    }
-
-    private var batteryColor: Color {
-        if battery.level <= 15 { return .red }
-        if battery.level <= 30 { return .orange }
-        return .green
     }
 }

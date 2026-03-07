@@ -394,7 +394,7 @@ struct MenuBarBatteryRow: View {
                 .font(.caption2)
                 .frame(width: 70, alignment: .leading)
             ProgressView(value: Double(battery.level), total: 100)
-                .tint(batteryColor)
+                .tint(.green)
                 .frame(maxWidth: .infinity)
             if !battery.charging.displayName.isEmpty {
                 Text(battery.charging.displayName)
@@ -402,12 +402,6 @@ struct MenuBarBatteryRow: View {
                     .foregroundColor(.secondary)
             }
         }
-    }
-
-    private var batteryColor: Color {
-        if battery.level <= 15 { return .red }
-        if battery.level <= 30 { return .orange }
-        return .green
     }
 }
 
@@ -428,12 +422,12 @@ struct MenuBarModePill: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .frame(maxWidth: .infinity)
-            .background(isSelected ? Color.accentColor.opacity(0.2) : Color(nsColor: .controlBackgroundColor))
+            .background(isSelected ? Color.accentColor.opacity(0.2) : Color(.controlBackgroundColor))
             .foregroundColor(isSelected ? .accentColor : .secondary)
             .cornerRadius(6)
             .overlay(
                 RoundedRectangle(cornerRadius: 6)
-                    .stroke(isSelected ? Color.accentColor.opacity(0.5) : Color(nsColor: .separatorColor), lineWidth: 0.5)
+                    .stroke(isSelected ? Color.accentColor.opacity(0.5) : Color(.separatorColor), lineWidth: 0.5)
             )
         }
         .buttonStyle(.plain)
@@ -461,12 +455,12 @@ struct MenuBarSourcePill: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .frame(maxWidth: .infinity)
-            .background(isSelected ? Color.accentColor.opacity(0.2) : Color(nsColor: .controlBackgroundColor))
+            .background(isSelected ? Color.accentColor.opacity(0.2) : Color(.controlBackgroundColor))
             .foregroundColor(isSelected ? .accentColor : .secondary)
             .cornerRadius(6)
             .overlay(
                 RoundedRectangle(cornerRadius: 6)
-                    .stroke(isSelected ? Color.accentColor.opacity(0.5) : Color(nsColor: .separatorColor), lineWidth: 0.5)
+                    .stroke(isSelected ? Color.accentColor.opacity(0.5) : Color(.separatorColor), lineWidth: 0.5)
             )
         }
         .buttonStyle(.plain)

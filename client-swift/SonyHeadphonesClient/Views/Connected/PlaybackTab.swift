@@ -260,12 +260,12 @@ struct SourcePill: View {
                     .padding(.horizontal, 12)
                     .padding(.vertical, 7)
                     .frame(maxWidth: .infinity)
-                    .background(isSelected ? Color.accentColor.opacity(0.15) : Color(nsColor: .controlBackgroundColor))
+                    .background(isSelected ? Color.accentColor.opacity(0.15) : Color(.controlBackgroundColor))
                     .foregroundColor(isSelected ? .accentColor : .primary)
                     .cornerRadius(8)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
-                            .stroke(isSelected ? Color.accentColor.opacity(0.5) : Color(nsColor: .separatorColor), lineWidth: 0.5)
+                            .stroke(isSelected ? Color.accentColor.opacity(0.5) : Color(.separatorColor), lineWidth: 0.5)
                     )
             }
             .buttonStyle(.plain)

@@ -254,11 +254,11 @@ struct GlassCardModifier: ViewModifier {
                 .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 12))
         } else {
             content
-                .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+                .background(Color(.controlBackgroundColor).opacity(0.5))
                 .cornerRadius(10)
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
+                        .stroke(Color(.separatorColor), lineWidth: 0.5)
                 )
         }
     }
@@ -302,12 +302,12 @@ struct ModePill: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 7)
                 .frame(maxWidth: .infinity)
-                .background(isSelected ? Color.accentColor.opacity(0.2) : Color(nsColor: .controlBackgroundColor))
+                .background(isSelected ? Color.accentColor.opacity(0.2) : Color(.controlBackgroundColor))
                 .foregroundColor(isSelected ? .accentColor : .secondary)
                 .cornerRadius(8)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(isSelected ? Color.accentColor.opacity(0.5) : Color(nsColor: .separatorColor), lineWidth: 1)
+                        .stroke(isSelected ? Color.accentColor.opacity(0.5) : Color(.separatorColor), lineWidth: 1)
                 )
             }
             .buttonStyle(.plain)
@@ -401,13 +401,13 @@ struct EQBandSlider: View {
             ZStack {
                 // Track background
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(Color(nsColor: .separatorColor))
+                    .fill(Color(.separatorColor))
                     .frame(width: trackWidth, height: trackHeight)
                     .position(x: centerX, y: geo.size.height / 2)
 
                 // Zero line
                 Rectangle()
-                    .fill(Color(nsColor: .tertiaryLabelColor))
+                    .fill(Color(.tertiaryLabelColor))
                     .frame(width: 12, height: 1)
                     .position(x: centerX, y: zeroY)
 
