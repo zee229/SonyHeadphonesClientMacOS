@@ -21,6 +21,14 @@ enum AppTheme: Int, CaseIterable {
         case .dark: return NSAppearance(named: .darkAqua)
         }
     }
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system: return nil
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
 }
 
 @main
@@ -29,11 +37,16 @@ struct SonyHeadphonesClientApp: App {
     @AppStorage("appTheme") private var appTheme: Int = 0
     @AppStorage("menuBarEnabled") private var menuBarEnabled: Bool = true
 
+    private var preferredColorScheme: ColorScheme? {
+        AppTheme(rawValue: appTheme)?.colorScheme
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environmentObject(manager)
                 .frame(minWidth: 400, minHeight: 500)
+                .preferredColorScheme(preferredColorScheme)
                 .onAppear { applyTheme(); registerLaunchAtLoginIfNeeded() }
                 .onChange(of: appTheme) { _, _ in applyTheme() }
         }
@@ -51,11 +64,13 @@ struct SonyHeadphonesClientApp: App {
             AppSettingsView()
                 .frame(width: 360)
                 .fixedSize()
+                .preferredColorScheme(preferredColorScheme)
         }
 
         MenuBarExtra(isInserted: $menuBarEnabled) {
             MenuBarPopoverView()
                 .environmentObject(manager)
+                .preferredColorScheme(preferredColorScheme)
         } label: {
             MenuBarLabel(manager: manager)
         }
