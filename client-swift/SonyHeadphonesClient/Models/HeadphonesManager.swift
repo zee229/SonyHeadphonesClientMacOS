@@ -1,6 +1,7 @@
 import Foundation
 @preconcurrency import Combine
 import CoreBluetooth
+import MDRProtocol
 
 @MainActor
 final class HeadphonesManager: ObservableObject {
@@ -8,7 +9,7 @@ final class HeadphonesManager: ObservableObject {
     @Published var connectionState: ConnectionState = .disconnected
 
     // MARK: - Device List
-    @Published var devices: [MDRDeviceInfo] = []
+    @Published var devices: [MDRBluetoothDevice] = []
     @Published var selectedDeviceIndex: Int = 0
 
     // MARK: - Read-only Device Info
@@ -33,48 +34,46 @@ final class HeadphonesManager: ObservableObject {
     @Published var playPause: PlaybackStatus = .unsettled
 
     // MARK: - Support Functions
-    var supportTable1: [UInt8: Bool] = [:]
-    var supportTable2: [UInt8: Bool] = [:]
 
     func supports(_ f: SupportFunctionT1) -> Bool {
         guard let hp = headphones else { return false }
-        return mdrHeadphonesSupportTable1(hp, f.rawValue) != 0
+        return hp.support.table1Functions[Int(f.rawValue)]
     }
     func supports(_ f: SupportFunctionT2) -> Bool {
         guard let hp = headphones else { return false }
-        return mdrHeadphonesSupportTable2(hp, f.rawValue) != 0
+        return hp.support.table2Functions[Int(f.rawValue)]
     }
 
     func supportsTable1Raw(_ val: UInt8) -> Bool {
         guard let hp = headphones else { return false }
-        return mdrHeadphonesSupportTable1(hp, val) != 0
+        return hp.support.table1Functions[Int(val)]
     }
 
     func supportsTable2Raw(_ val: UInt8) -> Bool {
         guard let hp = headphones else { return false }
-        return mdrHeadphonesSupportTable2(hp, val) != 0
+        return hp.support.table2Functions[Int(val)]
     }
 
     // MARK: - NC/ASM
-    @Published var ncAsmEnabled: Bool = false { didSet { if ncAsmEnabled != oldValue, let hp = headphones { mdrHeadphonesSetNcAsmEnabledDesired(hp, ncAsmEnabled ? 1 : 0) } } }
-    @Published var ncAsmFocusOnVoice: Bool = false { didSet { if ncAsmFocusOnVoice != oldValue, let hp = headphones { mdrHeadphonesSetNcAsmFocusOnVoiceDesired(hp, ncAsmFocusOnVoice ? 1 : 0) } } }
-    @Published var ncAsmAmbientLevel: Int32 = 0 { didSet { if ncAsmAmbientLevel != oldValue, let hp = headphones { mdrHeadphonesSetNcAsmAmbientLevelDesired(hp, ncAsmAmbientLevel) } } }
-    @Published var ncAsmButtonFunction: ButtonFunction = .noFunction { didSet { if ncAsmButtonFunction != oldValue, let hp = headphones { mdrHeadphonesSetNcAsmButtonFunctionDesired(hp, ncAsmButtonFunction.rawValue) } } }
-    @Published var ncAsmMode: NcAsmMode = .nc { didSet { if ncAsmMode != oldValue, let hp = headphones { mdrHeadphonesSetNcAsmModeDesired(hp, ncAsmMode.rawValue) } } }
-    @Published var ncAsmAutoAsmEnabled: Bool = false { didSet { if ncAsmAutoAsmEnabled != oldValue, let hp = headphones { mdrHeadphonesSetNcAsmAutoAsmEnabledDesired(hp, ncAsmAutoAsmEnabled ? 1 : 0) } } }
-    @Published var ncAsmNoiseAdaptiveSensitivity: NoiseAdaptiveSensitivity = .standard { didSet { if ncAsmNoiseAdaptiveSensitivity != oldValue, let hp = headphones { mdrHeadphonesSetNcAsmNoiseAdaptiveSensitivityDesired(hp, ncAsmNoiseAdaptiveSensitivity.rawValue) } } }
+    @Published var ncAsmEnabled: Bool = false { didSet { if ncAsmEnabled != oldValue { headphones?.ncAsmEnabled.desired = ncAsmEnabled } } }
+    @Published var ncAsmFocusOnVoice: Bool = false { didSet { if ncAsmFocusOnVoice != oldValue { headphones?.ncAsmFocusOnVoice.desired = ncAsmFocusOnVoice } } }
+    @Published var ncAsmAmbientLevel: Int32 = 0 { didSet { if ncAsmAmbientLevel != oldValue { headphones?.ncAsmAmbientLevel.desired = Int(ncAsmAmbientLevel) } } }
+    @Published var ncAsmButtonFunction: ButtonFunction = .noFunction { didSet { if ncAsmButtonFunction != oldValue, let v = MDRProtocol.Function(rawValue: ncAsmButtonFunction.rawValue) { headphones?.ncAsmButtonFunction.desired = v } } }
+    @Published var ncAsmMode: NcAsmMode = .nc { didSet { if ncAsmMode != oldValue, let v = MDRProtocol.NcAsmMode(rawValue: ncAsmMode.rawValue) { headphones?.ncAsmMode.desired = v } } }
+    @Published var ncAsmAutoAsmEnabled: Bool = false { didSet { if ncAsmAutoAsmEnabled != oldValue { headphones?.ncAsmAutoAsmEnabled.desired = ncAsmAutoAsmEnabled } } }
+    @Published var ncAsmNoiseAdaptiveSensitivity: NoiseAdaptiveSensitivity = .standard { didSet { if ncAsmNoiseAdaptiveSensitivity != oldValue, let v = MDRProtocol.NoiseAdaptiveSensitivity(rawValue: ncAsmNoiseAdaptiveSensitivity.rawValue) { headphones?.ncAsmNoiseAdaptiveSensitivity.desired = v } } }
 
     // MARK: - Power
-    @Published var powerAutoOff: AutoPowerOffElements = .powerOffDisable { didSet { if powerAutoOff != oldValue, let hp = headphones { mdrHeadphonesSetPowerAutoOffDesired(hp, powerAutoOff.rawValue) } } }
+    @Published var powerAutoOff: AutoPowerOffElements = .powerOffDisable { didSet { if powerAutoOff != oldValue, let v = MDRProtocol.AutoPowerOffElements(rawValue: powerAutoOff.rawValue) { headphones?.powerAutoOff.desired = v } } }
 
     // MARK: - Playback Controls
-    @Published var playVolume: Int32 = 0 { didSet { if playVolume != oldValue, let hp = headphones { mdrHeadphonesSetPlayVolumeDesired(hp, playVolume) } } }
+    @Published var playVolume: Int32 = 0 { didSet { if playVolume != oldValue { headphones?.playVolume.desired = Int(playVolume) } } }
 
     // MARK: - General Settings (bools 1-4)
-    @Published var gsParamBool1: Bool = false { didSet { if gsParamBool1 != oldValue, let hp = headphones { mdrHeadphonesSetGsParamBoolDesired(hp, 1, gsParamBool1 ? 1 : 0) } } }
-    @Published var gsParamBool2: Bool = false { didSet { if gsParamBool2 != oldValue, let hp = headphones { mdrHeadphonesSetGsParamBoolDesired(hp, 2, gsParamBool2 ? 1 : 0) } } }
-    @Published var gsParamBool3: Bool = false { didSet { if gsParamBool3 != oldValue, let hp = headphones { mdrHeadphonesSetGsParamBoolDesired(hp, 3, gsParamBool3 ? 1 : 0) } } }
-    @Published var gsParamBool4: Bool = false { didSet { if gsParamBool4 != oldValue, let hp = headphones { mdrHeadphonesSetGsParamBoolDesired(hp, 4, gsParamBool4 ? 1 : 0) } } }
+    @Published var gsParamBool1: Bool = false { didSet { if gsParamBool1 != oldValue { headphones?.gsParamBool1.desired = gsParamBool1 } } }
+    @Published var gsParamBool2: Bool = false { didSet { if gsParamBool2 != oldValue { headphones?.gsParamBool2.desired = gsParamBool2 } } }
+    @Published var gsParamBool3: Bool = false { didSet { if gsParamBool3 != oldValue { headphones?.gsParamBool3.desired = gsParamBool3 } } }
+    @Published var gsParamBool4: Bool = false { didSet { if gsParamBool4 != oldValue { headphones?.gsParamBool4.desired = gsParamBool4 } } }
 
     @Published var gsCapability1: GeneralSettingCapability = .init(type: 0, subject: "", summary: "")
     @Published var gsCapability2: GeneralSettingCapability = .init(type: 0, subject: "", summary: "")
@@ -82,35 +81,35 @@ final class HeadphonesManager: ObservableObject {
     @Published var gsCapability4: GeneralSettingCapability = .init(type: 0, subject: "", summary: "")
 
     // MARK: - Upscaling
-    @Published var upscalingEnabled: Bool = false { didSet { if upscalingEnabled != oldValue, let hp = headphones { mdrHeadphonesSetUpscalingEnabledDesired(hp, upscalingEnabled ? 1 : 0) } } }
+    @Published var upscalingEnabled: Bool = false { didSet { if upscalingEnabled != oldValue { headphones?.upscalingEnabled.desired = upscalingEnabled } } }
 
     // MARK: - Auto Pause
-    @Published var autoPauseEnabled: Bool = false { didSet { if autoPauseEnabled != oldValue, let hp = headphones { mdrHeadphonesSetAutoPauseEnabledDesired(hp, autoPauseEnabled ? 1 : 0) } } }
+    @Published var autoPauseEnabled: Bool = false { didSet { if autoPauseEnabled != oldValue { headphones?.autoPauseEnabled.desired = autoPauseEnabled } } }
 
     // MARK: - Touch Function
-    @Published var touchFunctionLeft: TouchPreset = .noFunction { didSet { if touchFunctionLeft != oldValue, let hp = headphones { mdrHeadphonesSetTouchFunctionLeftDesired(hp, touchFunctionLeft.rawValue) } } }
-    @Published var touchFunctionRight: TouchPreset = .noFunction { didSet { if touchFunctionRight != oldValue, let hp = headphones { mdrHeadphonesSetTouchFunctionRightDesired(hp, touchFunctionRight.rawValue) } } }
+    @Published var touchFunctionLeft: TouchPreset = .noFunction { didSet { if touchFunctionLeft != oldValue, let v = MDRProtocol.Preset(rawValue: touchFunctionLeft.rawValue) { headphones?.touchFunctionLeft.desired = v } } }
+    @Published var touchFunctionRight: TouchPreset = .noFunction { didSet { if touchFunctionRight != oldValue, let v = MDRProtocol.Preset(rawValue: touchFunctionRight.rawValue) { headphones?.touchFunctionRight.desired = v } } }
 
     // MARK: - Speak To Chat
-    @Published var speakToChatEnabled: Bool = false { didSet { if speakToChatEnabled != oldValue, let hp = headphones { mdrHeadphonesSetSpeakToChatEnabledDesired(hp, speakToChatEnabled ? 1 : 0) } } }
-    @Published var speakToChatDetectSensitivity: DetectSensitivity = .auto_ { didSet { if speakToChatDetectSensitivity != oldValue, let hp = headphones { mdrHeadphonesSetSpeakToChatDetectSensitivityDesired(hp, speakToChatDetectSensitivity.rawValue) } } }
-    @Published var speakToModeOutTime: ModeOutTime = .mid { didSet { if speakToModeOutTime != oldValue, let hp = headphones { mdrHeadphonesSetSpeakToModeOutTimeDesired(hp, speakToModeOutTime.rawValue) } } }
+    @Published var speakToChatEnabled: Bool = false { didSet { if speakToChatEnabled != oldValue { headphones?.speakToChatEnabled.desired = speakToChatEnabled } } }
+    @Published var speakToChatDetectSensitivity: DetectSensitivity = .auto_ { didSet { if speakToChatDetectSensitivity != oldValue, let v = MDRProtocol.DetectSensitivity(rawValue: speakToChatDetectSensitivity.rawValue) { headphones?.speakToChatDetectSensitivity.desired = v } } }
+    @Published var speakToModeOutTime: ModeOutTime = .mid { didSet { if speakToModeOutTime != oldValue, let v = MDRProtocol.ModeOutTime(rawValue: speakToModeOutTime.rawValue) { headphones?.speakToModeOutTime.desired = v } } }
 
     // MARK: - Head Gesture
-    @Published var headGestureEnabled: Bool = false { didSet { if headGestureEnabled != oldValue, let hp = headphones { mdrHeadphonesSetHeadGestureEnabledDesired(hp, headGestureEnabled ? 1 : 0) } } }
+    @Published var headGestureEnabled: Bool = false { didSet { if headGestureEnabled != oldValue { headphones?.headGestureEnabled.desired = headGestureEnabled } } }
 
     // MARK: - Equalizer
     @Published var eqAvailable: Bool = false
-    @Published var eqPresetId: EqPresetId = .off { didSet { if eqPresetId != oldValue, let hp = headphones { mdrHeadphonesSetEqPresetIdDesired(hp, eqPresetId.rawValue) } } }
-    @Published var eqClearBass: Int32 = 0 { didSet { if eqClearBass != oldValue, let hp = headphones { mdrHeadphonesSetEqClearBassDesired(hp, eqClearBass) } } }
+    @Published var eqPresetId: EqPresetId = .off { didSet { if eqPresetId != oldValue, let v = MDRProtocol.EqPresetId(rawValue: eqPresetId.rawValue) { headphones?.eqPresetId.desired = v } } }
+    @Published var eqClearBass: Int32 = 0 { didSet { if eqClearBass != oldValue { headphones?.eqClearBass.desired = Int(eqClearBass) } } }
     @Published var eqBands: [Int32] = []
 
     // MARK: - Voice Guidance
-    @Published var voiceGuidanceEnabled: Bool = false { didSet { if voiceGuidanceEnabled != oldValue, let hp = headphones { mdrHeadphonesSetVoiceGuidanceEnabledDesired(hp, voiceGuidanceEnabled ? 1 : 0) } } }
-    @Published var voiceGuidanceVolume: Int32 = 0 { didSet { if voiceGuidanceVolume != oldValue, let hp = headphones { mdrHeadphonesSetVoiceGuidanceVolumeDesired(hp, voiceGuidanceVolume) } } }
+    @Published var voiceGuidanceEnabled: Bool = false { didSet { if voiceGuidanceEnabled != oldValue { headphones?.voiceGuidanceEnabled.desired = voiceGuidanceEnabled } } }
+    @Published var voiceGuidanceVolume: Int32 = 0 { didSet { if voiceGuidanceVolume != oldValue { headphones?.voiceGuidanceVolume.desired = Int(voiceGuidanceVolume) } } }
 
     // MARK: - Pairing
-    @Published var pairingMode: Bool = false { didSet { if pairingMode != oldValue, let hp = headphones { mdrHeadphonesSetPairingModeDesired(hp, pairingMode ? 1 : 0) } } }
+    @Published var pairingMode: Bool = false { didSet { if pairingMode != oldValue { headphones?.pairingMode.desired = pairingMode } } }
 
     // MARK: - Paired Devices
     @Published var pairedDevices: [PairedDevice] = []
@@ -131,9 +130,8 @@ final class HeadphonesManager: ObservableObject {
     private var connectedDeviceMac: String = ""
 
     // MARK: - Private
-    private var macOSConnection: OpaquePointer? // MDRConnectionMacOS*
-    private var connection: UnsafeMutablePointer<MDRConnection>? // MDRConnection*
-    private var headphones: OpaquePointer? // MDRHeadphones*
+    private let transport = BluetoothTransport()
+    private var headphones: MDRHeadphones?
     private var pollTimer: AnyCancellable?
     private var isPollingSuppressed = false
     private var lastSnapshotWrite: Date = .distantPast
@@ -144,42 +142,24 @@ final class HeadphonesManager: ObservableObject {
     // MARK: - Lifecycle
     init() {
         centralManager = CBCentralManager(delegate: nil, queue: nil)
-        macOSConnection = mdrConnectionMacOSCreate()
-        connection = mdrConnectionMacOSGet(macOSConnection)
         connectionState = .discovering
         refreshDevices()
         autoConnectIfRemembered()
     }
 
-    nonisolated deinit {
-        MainActor.assumeIsolated {
-            pollTimer?.cancel()
-            if let hp = headphones { mdrHeadphonesDestroy(hp) }
-            if let conn = macOSConnection { mdrConnectionMacOSDestroy(conn) }
-        }
+    deinit {
+        pollTimer?.cancel()
+        transport.disconnect()
     }
 
     // MARK: - Device Discovery
     func refreshDevices() {
-        guard let conn = connection else { return }
-        var pList: UnsafeMutablePointer<MDRDeviceInfo>?
-        var count: Int32 = 0
-        let r = mdrConnectionGetDevicesList(conn, &pList, &count)
-        guard r == MDR_RESULT_OK, let list = pList else { return }
-        var result: [MDRDeviceInfo] = []
-        for i in 0..<Int(count) {
-            result.append(list[i])
-        }
-        devices = result
-        mdrConnectionFreeDevicesList(conn, &pList)
+        devices = BluetoothTransport.pairedDevices()
 
         // Default select first Sony device
         selectedDeviceIndex = 0
         for (i, device) in devices.enumerated() {
-            let name = withUnsafePointer(to: device.szDeviceName) {
-                $0.withMemoryRebound(to: CChar.self, capacity: 128) { String(cString: $0) }
-            }
-            if Self.isSonyDevice(name) {
+            if Self.isSonyDevice(device.name) {
                 selectedDeviceIndex = i
                 break
             }
@@ -199,27 +179,21 @@ final class HeadphonesManager: ObservableObject {
 
     func deviceName(at index: Int) -> String {
         guard index >= 0 && index < devices.count else { return "" }
-        return withUnsafePointer(to: devices[index].szDeviceName) {
-            $0.withMemoryRebound(to: CChar.self, capacity: 128) { String(cString: $0) }
-        }
+        return devices[index].name
     }
 
     func deviceMac(at index: Int) -> String {
         guard index >= 0 && index < devices.count else { return "" }
-        return withUnsafePointer(to: devices[index].szDeviceMacAddress) {
-            $0.withMemoryRebound(to: CChar.self, capacity: 18) { String(cString: $0) }
-        }
+        return devices[index].macAddress
     }
 
     // MARK: - Connect / Disconnect
     func connect(deviceIndex: Int) {
-        guard let conn = connection else { return }
         let mac = deviceMac(at: deviceIndex)
         connectedDeviceMac = mac
-        let uuid = MDR_SERVICE_UUID_XM5
-        let r = mdrConnectionConnect(conn, mac, uuid)
-        if r != MDR_RESULT_OK && r != MDR_RESULT_INPROGRESS {
-            connectionState = .error("Connection failed: \(String(cString: mdrConnectionGetLastError(conn)))")
+        transport.connect(macAddress: mac)
+        if case .error(let msg) = transport.connectionState {
+            connectionState = .error("Connection failed: \(msg)")
             return
         }
         connectionState = .connecting
@@ -258,55 +232,49 @@ final class HeadphonesManager: ObservableObject {
     func disconnect() {
         pollTimer?.cancel()
         pollTimer = nil
-        if let hp = headphones {
-            mdrHeadphonesDestroy(hp)
-            headphones = nil
-        }
-        if let conn = connection {
-            mdrConnectionDisconnect(conn)
-        }
+        headphones = nil
+        transport.disconnect()
         connectionState = .discovering
         refreshDevices()
     }
 
     func shutdown() {
-        guard let hp = headphones else { return }
-        mdrHeadphonesSetShutdownDesired(hp, 1)
+        headphones?.shutdown.desired = true
     }
 
     // MARK: - Playback Controls
     func sendPlaybackControl(_ control: PlaybackControl) {
-        guard let hp = headphones else { return }
-        mdrHeadphonesSetPlayControlDesired(hp, control.rawValue)
+        guard let v = MDRProtocol.PlaybackControl(rawValue: control.rawValue) else { return }
+        headphones?.playControl.desired = v
     }
 
     // MARK: - EQ Band Write
     func setEqBandValue(index: Int, value: Int32) {
         guard let hp = headphones, index >= 0, index < eqBands.count else { return }
         eqBands[index] = value
-        mdrHeadphonesSetEqBandValueDesired(hp, Int32(index), value)
+        var config = hp.eqConfig.desired
+        if index < config.count {
+            config[index] = Int(value)
+            hp.eqConfig.desired = config
+        }
     }
 
     // MARK: - Device Management
     func setMultipointDeviceMac(_ mac: String) {
-        guard let hp = headphones else { return }
         multipointDeviceMac = mac
-        mdrHeadphonesSetMultipointDeviceMacDesired(hp, mac)
+        headphones?.multipointDeviceMac.desired = mac
     }
 
     func disconnectPairedDevice(_ mac: String) {
-        guard let hp = headphones else { return }
-        mdrHeadphonesSetPairedDeviceDisconnectMacDesired(hp, mac)
+        headphones?.pairedDeviceDisconnectMac.desired = mac
     }
 
     func connectPairedDevice(_ mac: String) {
-        guard let hp = headphones else { return }
-        mdrHeadphonesSetPairedDeviceConnectMacDesired(hp, mac)
+        headphones?.pairedDeviceConnectMac.desired = mac
     }
 
     func unpairDevice(_ mac: String) {
-        guard let hp = headphones else { return }
-        mdrHeadphonesSetPairedDeviceUnpairMacDesired(hp, mac)
+        headphones?.pairedDeviceUnpairMac.desired = mac
     }
 
     // MARK: - Poll Timer
@@ -333,235 +301,230 @@ final class HeadphonesManager: ObservableObject {
     }
 
     private func pollConnecting() {
-        guard let conn = connection else { return }
-        let r = mdrConnectionPoll(conn, 0)
-        switch r {
-        case MDR_RESULT_OK:
+        let state = transport.poll(timeoutMS: 0)
+        switch state {
+        case .connected:
             // Connected! Create headphones
-            headphones = mdrHeadphonesCreate(conn)
-            guard let hp = headphones else {
-                connectionState = .error("Failed to create headphones")
-                return
-            }
-            let initResult = mdrHeadphonesRequestInitV2(hp)
-            guard initResult == MDR_RESULT_OK else {
-                connectionState = .error("Init failed")
-                return
-            }
+            let hp = MDRHeadphones(transport: transport)
+            headphones = hp
+            hp.requestInitV2()
             connectionState = .connected
             if rememberedDeviceMac != connectedDeviceMac {
                 showRememberDeviceAlert = true
             }
 
-        case MDR_RESULT_ERROR_TIMEOUT, MDR_RESULT_INPROGRESS:
+        case .connecting:
             // Still connecting
-            connectionErrorMessage = String(cString: mdrConnectionGetLastError(conn))
+            connectionErrorMessage = transport.lastError
 
-        default:
-            // Error
-            connectionErrorMessage = String(cString: mdrConnectionGetLastError(conn))
-            mdrConnectionDisconnect(conn)
+        case .error(let msg):
+            connectionErrorMessage = msg
+            transport.disconnect()
             connectionState = .error(connectionErrorMessage)
+
+        case .disconnected:
+            connectionErrorMessage = transport.lastError
+            transport.disconnect()
+            connectionState = .error(connectionErrorMessage.isEmpty ? "Disconnected" : connectionErrorMessage)
         }
     }
 
     private func pollConnected() {
-        guard let hp = headphones, let conn = connection else { return }
+        guard let hp = headphones else { return }
 
-        let event = mdrHeadphonesPollEvents(hp)
+        let event = hp.pollEvents()
 
-        switch event {
-        case MDR_HEADPHONES_TASK_INIT_OK:
-            let _ = mdrHeadphonesRequestSyncV2(hp)
-        case MDR_HEADPHONES_IDLE:
-            if mdrHeadphonesIsDirty(hp) == MDR_RESULT_INPROGRESS {
-                let _ = mdrHeadphonesRequestCommitV2(hp)
+        if let mdrEvent = MDREvent(rawValue: event) {
+            switch mdrEvent {
+            case .taskInitOK:
+                hp.requestSyncV2()
+            case .idle:
+                if hp.isDirty {
+                    hp.requestCommitV2()
+                }
+            case .error:
+                headphonesErrorMessage = hp.lastError
+                transport.disconnect()
+                connectionState = .error("Disconnected: \(headphonesErrorMessage)")
+                return
+            default:
+                break
             }
-        case MDR_HEADPHONES_ERROR:
-            connectionErrorMessage = String(cString: mdrConnectionGetLastError(conn))
-            headphonesErrorMessage = String(cString: mdrHeadphonesGetLastError(hp))
-            mdrConnectionDisconnect(conn)
-            connectionState = .error("Disconnected: \(headphonesErrorMessage)")
-            return
-        default:
-            break
         }
 
         readAllFields()
     }
 
-    // MARK: - Read all fields from C
+    // MARK: - Read all fields from MDRHeadphones
     private func readAllFields() {
         guard let hp = headphones else { return }
 
-        let newModelName = String(cString: mdrHeadphonesGetModelName(hp))
+        let newModelName = hp.modelName
         if modelName != newModelName { modelName = newModelName }
 
-        let newUniqueId = String(cString: mdrHeadphonesGetUniqueId(hp))
+        let newUniqueId = hp.uniqueId
         if uniqueId != newUniqueId { uniqueId = newUniqueId }
 
-        let newFWVersion = String(cString: mdrHeadphonesGetFWVersion(hp))
+        let newFWVersion = hp.fwVersion
         if fwVersion != newFWVersion { fwVersion = newFWVersion }
 
-        let newSeries = ModelSeriesType(rawValue: mdrHeadphonesGetModelSeries(hp)) ?? .noSeries
+        let newSeries = ModelSeriesType(rawValue: hp.modelSeries.rawValue) ?? .noSeries
         if modelSeries != newSeries { modelSeries = newSeries }
 
-        let newColor = ModelColor(rawValue: mdrHeadphonesGetModelColor(hp)) ?? .default
+        let newColor = ModelColor(rawValue: hp.modelColor.rawValue) ?? .default
         if modelColor != newColor { modelColor = newColor }
 
-        let newCodec = AudioCodec(rawValue: mdrHeadphonesGetAudioCodec(hp)) ?? .other
+        let newCodec = AudioCodec(rawValue: hp.audioCodec.rawValue) ?? .other
         if audioCodec != newCodec { audioCodec = newCodec }
 
-        let newUpType = UpscalingType(rawValue: mdrHeadphonesGetUpscalingType(hp)) ?? .dsee
+        let newUpType = UpscalingType(rawValue: hp.upscalingType.rawValue) ?? .dsee
         if upscalingType != newUpType { upscalingType = newUpType }
 
-        let newUpAvail = mdrHeadphonesGetUpscalingAvailable(hp) != 0
+        let newUpAvail = hp.upscalingAvailable
         if upscalingAvailable != newUpAvail { upscalingAvailable = newUpAvail }
 
         // Battery
-        let newBattL = BatteryInfo(level: mdrHeadphonesGetBatteryLLevel(hp), threshold: mdrHeadphonesGetBatteryLThreshold(hp), charging: BatteryChargingStatus(rawValue: mdrHeadphonesGetBatteryLCharging(hp)) ?? .notCharging)
+        let newBattL = BatteryInfo(level: hp.batteryL.level, threshold: hp.batteryL.threshold, charging: BatteryChargingStatus(rawValue: hp.batteryL.charging.rawValue) ?? .notCharging)
         if batteryL != newBattL { batteryL = newBattL }
 
-        let newBattR = BatteryInfo(level: mdrHeadphonesGetBatteryRLevel(hp), threshold: mdrHeadphonesGetBatteryRThreshold(hp), charging: BatteryChargingStatus(rawValue: mdrHeadphonesGetBatteryRCharging(hp)) ?? .notCharging)
+        let newBattR = BatteryInfo(level: hp.batteryR.level, threshold: hp.batteryR.threshold, charging: BatteryChargingStatus(rawValue: hp.batteryR.charging.rawValue) ?? .notCharging)
         if batteryR != newBattR { batteryR = newBattR }
 
-        let newBattCase = BatteryInfo(level: mdrHeadphonesGetBatteryCaseLevel(hp), threshold: mdrHeadphonesGetBatteryCaseThreshold(hp), charging: BatteryChargingStatus(rawValue: mdrHeadphonesGetBatteryCaseCharging(hp)) ?? .notCharging)
+        let newBattCase = BatteryInfo(level: hp.batteryCase.level, threshold: hp.batteryCase.threshold, charging: BatteryChargingStatus(rawValue: hp.batteryCase.charging.rawValue) ?? .notCharging)
         if batteryCase != newBattCase { batteryCase = newBattCase }
 
         // Playback metadata
-        let newTitle = String(cString: mdrHeadphonesGetPlayTrackTitle(hp))
+        let newTitle = hp.playTrackTitle
         if playTrackTitle != newTitle { playTrackTitle = newTitle }
-        let newAlbum = String(cString: mdrHeadphonesGetPlayTrackAlbum(hp))
+        let newAlbum = hp.playTrackAlbum
         if playTrackAlbum != newAlbum { playTrackAlbum = newAlbum }
-        let newArtist = String(cString: mdrHeadphonesGetPlayTrackArtist(hp))
+        let newArtist = hp.playTrackArtist
         if playTrackArtist != newArtist { playTrackArtist = newArtist }
-        let newPlayPause = PlaybackStatus(rawValue: mdrHeadphonesGetPlayPause(hp)) ?? .unsettled
+        let newPlayPause = PlaybackStatus(rawValue: hp.playPause.rawValue) ?? .unsettled
         if playPause != newPlayPause { playPause = newPlayPause }
 
-        // NC/ASM - read current values (don't write back to C unless user changes)
+        // NC/ASM - read current values (don't write back unless user changes)
         isPollingSuppressed = true
         defer { isPollingSuppressed = false }
 
-        let newNcEnabled = mdrHeadphonesGetNcAsmEnabledCurrent(hp) != 0
+        let newNcEnabled = hp.ncAsmEnabled.desired
         if ncAsmEnabled != newNcEnabled { ncAsmEnabled = newNcEnabled }
-        let newNcFocus = mdrHeadphonesGetNcAsmFocusOnVoiceCurrent(hp) != 0
+        let newNcFocus = hp.ncAsmFocusOnVoice.desired
         if ncAsmFocusOnVoice != newNcFocus { ncAsmFocusOnVoice = newNcFocus }
-        let newAmbient = mdrHeadphonesGetNcAsmAmbientLevelDesired(hp)
+        let newAmbient = Int32(hp.ncAsmAmbientLevel.desired)
         if ncAsmAmbientLevel != newAmbient { ncAsmAmbientLevel = newAmbient }
-        let newBtnFunc = ButtonFunction(rawValue: mdrHeadphonesGetNcAsmButtonFunctionDesired(hp)) ?? .noFunction
+        let newBtnFunc = ButtonFunction(rawValue: hp.ncAsmButtonFunction.desired.rawValue) ?? .noFunction
         if ncAsmButtonFunction != newBtnFunc { ncAsmButtonFunction = newBtnFunc }
-        let newMode = NcAsmMode(rawValue: mdrHeadphonesGetNcAsmModeDesired(hp)) ?? .nc
+        let newMode = NcAsmMode(rawValue: hp.ncAsmMode.desired.rawValue) ?? .nc
         if ncAsmMode != newMode { ncAsmMode = newMode }
-        let newAutoAsm = mdrHeadphonesGetNcAsmAutoAsmEnabledDesired(hp) != 0
+        let newAutoAsm = hp.ncAsmAutoAsmEnabled.desired
         if ncAsmAutoAsmEnabled != newAutoAsm { ncAsmAutoAsmEnabled = newAutoAsm }
-        let newAdaptSens = NoiseAdaptiveSensitivity(rawValue: mdrHeadphonesGetNcAsmNoiseAdaptiveSensitivityDesired(hp)) ?? .standard
+        let newAdaptSens = NoiseAdaptiveSensitivity(rawValue: hp.ncAsmNoiseAdaptiveSensitivity.desired.rawValue) ?? .standard
         if ncAsmNoiseAdaptiveSensitivity != newAdaptSens { ncAsmNoiseAdaptiveSensitivity = newAdaptSens }
 
         // Power
-        let newPowerAutoOff = AutoPowerOffElements(rawValue: mdrHeadphonesGetPowerAutoOffDesired(hp)) ?? .powerOffDisable
+        let newPowerAutoOff = AutoPowerOffElements(rawValue: hp.powerAutoOff.desired.rawValue) ?? .powerOffDisable
         if powerAutoOff != newPowerAutoOff { powerAutoOff = newPowerAutoOff }
 
         // Volume
-        let newVol = mdrHeadphonesGetPlayVolumeDesired(hp)
+        let newVol = Int32(hp.playVolume.desired)
         if playVolume != newVol { playVolume = newVol }
 
         // GS Params
-        let newGS1 = mdrHeadphonesGetGsParamBoolDesired(hp, 1) != 0
+        let newGS1 = hp.gsParamBool1.desired
         if gsParamBool1 != newGS1 { gsParamBool1 = newGS1 }
-        let newGS2 = mdrHeadphonesGetGsParamBoolDesired(hp, 2) != 0
+        let newGS2 = hp.gsParamBool2.desired
         if gsParamBool2 != newGS2 { gsParamBool2 = newGS2 }
-        let newGS3 = mdrHeadphonesGetGsParamBoolDesired(hp, 3) != 0
+        let newGS3 = hp.gsParamBool3.desired
         if gsParamBool3 != newGS3 { gsParamBool3 = newGS3 }
-        let newGS4 = mdrHeadphonesGetGsParamBoolDesired(hp, 4) != 0
+        let newGS4 = hp.gsParamBool4.desired
         if gsParamBool4 != newGS4 { gsParamBool4 = newGS4 }
 
         // GS Capabilities
-        for i in 1...4 {
+        let caps = [hp.gsCapability1, hp.gsCapability2, hp.gsCapability3, hp.gsCapability4]
+        for (i, protoCap) in caps.enumerated() {
             let cap = GeneralSettingCapability(
-                type: mdrHeadphonesGetGsCapabilityType(hp, Int32(i)),
-                subject: String(cString: mdrHeadphonesGetGsCapabilitySubject(hp, Int32(i))),
-                summary: String(cString: mdrHeadphonesGetGsCapabilitySummary(hp, Int32(i)))
+                type: protoCap.type.rawValue,
+                subject: protoCap.value.subject.value,
+                summary: protoCap.value.summary.value
             )
             switch i {
-            case 1: if gsCapability1 != cap { gsCapability1 = cap }
-            case 2: if gsCapability2 != cap { gsCapability2 = cap }
-            case 3: if gsCapability3 != cap { gsCapability3 = cap }
-            case 4: if gsCapability4 != cap { gsCapability4 = cap }
+            case 0: if gsCapability1 != cap { gsCapability1 = cap }
+            case 1: if gsCapability2 != cap { gsCapability2 = cap }
+            case 2: if gsCapability3 != cap { gsCapability3 = cap }
+            case 3: if gsCapability4 != cap { gsCapability4 = cap }
             default: break
             }
         }
 
         // Upscaling
-        let newUpEnabled = mdrHeadphonesGetUpscalingEnabledDesired(hp) != 0
+        let newUpEnabled = hp.upscalingEnabled.desired
         if upscalingEnabled != newUpEnabled { upscalingEnabled = newUpEnabled }
 
         // Auto Pause
-        let newAutoPause = mdrHeadphonesGetAutoPauseEnabledDesired(hp) != 0
+        let newAutoPause = hp.autoPauseEnabled.desired
         if autoPauseEnabled != newAutoPause { autoPauseEnabled = newAutoPause }
 
         // Touch
-        let newTouchL = TouchPreset(rawValue: mdrHeadphonesGetTouchFunctionLeftDesired(hp)) ?? .noFunction
+        let newTouchL = TouchPreset(rawValue: hp.touchFunctionLeft.desired.rawValue) ?? .noFunction
         if touchFunctionLeft != newTouchL { touchFunctionLeft = newTouchL }
-        let newTouchR = TouchPreset(rawValue: mdrHeadphonesGetTouchFunctionRightDesired(hp)) ?? .noFunction
+        let newTouchR = TouchPreset(rawValue: hp.touchFunctionRight.desired.rawValue) ?? .noFunction
         if touchFunctionRight != newTouchR { touchFunctionRight = newTouchR }
 
         // Speak To Chat
-        let newSTC = mdrHeadphonesGetSpeakToChatEnabledDesired(hp) != 0
+        let newSTC = hp.speakToChatEnabled.desired
         if speakToChatEnabled != newSTC { speakToChatEnabled = newSTC }
-        let newSTCSens = DetectSensitivity(rawValue: mdrHeadphonesGetSpeakToChatDetectSensitivityDesired(hp)) ?? .auto_
+        let newSTCSens = DetectSensitivity(rawValue: hp.speakToChatDetectSensitivity.desired.rawValue) ?? .auto_
         if speakToChatDetectSensitivity != newSTCSens { speakToChatDetectSensitivity = newSTCSens }
-        let newSTCTime = ModeOutTime(rawValue: mdrHeadphonesGetSpeakToModeOutTimeDesired(hp)) ?? .mid
+        let newSTCTime = ModeOutTime(rawValue: hp.speakToModeOutTime.desired.rawValue) ?? .mid
         if speakToModeOutTime != newSTCTime { speakToModeOutTime = newSTCTime }
 
         // Head Gesture
-        let newHeadGesture = mdrHeadphonesGetHeadGestureEnabledDesired(hp) != 0
+        let newHeadGesture = hp.headGestureEnabled.desired
         if headGestureEnabled != newHeadGesture { headGestureEnabled = newHeadGesture }
 
         // EQ
-        let newEqAvail = mdrHeadphonesGetEqAvailableCurrent(hp) != 0
+        let newEqAvail = hp.eqAvailable.current
         if eqAvailable != newEqAvail { eqAvailable = newEqAvail }
-        let newEqPreset = EqPresetId(rawValue: mdrHeadphonesGetEqPresetIdDesired(hp)) ?? .off
+        let newEqPreset = EqPresetId(rawValue: hp.eqPresetId.desired.rawValue) ?? .off
         if eqPresetId != newEqPreset { eqPresetId = newEqPreset }
-        let newClearBass = mdrHeadphonesGetEqClearBassDesired(hp)
+        let newClearBass = Int32(hp.eqClearBass.desired)
         if eqClearBass != newClearBass { eqClearBass = newClearBass }
 
-        let bandCount = Int(mdrHeadphonesGetEqBandCount(hp))
+        let config = hp.eqConfig.desired
+        let bandCount = config.count
         if eqBands.count != bandCount {
-            eqBands = (0..<bandCount).map { mdrHeadphonesGetEqBandValueDesired(hp, Int32($0)) }
+            eqBands = config.map { Int32($0) }
         } else {
             for i in 0..<bandCount {
-                let val = mdrHeadphonesGetEqBandValueDesired(hp, Int32(i))
+                let val = Int32(config[i])
                 if eqBands[i] != val { eqBands[i] = val }
             }
         }
 
         // Voice Guidance
-        let newVGEnabled = mdrHeadphonesGetVoiceGuidanceEnabledDesired(hp) != 0
+        let newVGEnabled = hp.voiceGuidanceEnabled.desired
         if voiceGuidanceEnabled != newVGEnabled { voiceGuidanceEnabled = newVGEnabled }
-        let newVGVol = mdrHeadphonesGetVoiceGuidanceVolumeDesired(hp)
+        let newVGVol = Int32(hp.voiceGuidanceVolume.desired)
         if voiceGuidanceVolume != newVGVol { voiceGuidanceVolume = newVGVol }
 
         // Pairing
-        let newPairing = mdrHeadphonesGetPairingModeDesired(hp) != 0
+        let newPairing = hp.pairingMode.desired
         if pairingMode != newPairing { pairingMode = newPairing }
 
         // Multipoint Mac
-        let newMPMac = String(cString: mdrHeadphonesGetMultipointDeviceMacCurrent(hp))
+        let newMPMac = hp.multipointDeviceMac.current
         if multipointDeviceMac != newMPMac { multipointDeviceMac = newMPMac }
 
         // Paired Devices
-        let deviceCount = Int(mdrHeadphonesGetPairedDeviceCount(hp))
         var newPaired: [PairedDevice] = []
-        for i in 0..<deviceCount {
-            let name = String(cString: mdrHeadphonesGetPairedDeviceName(hp, Int32(i)))
-            let mac = String(cString: mdrHeadphonesGetPairedDeviceMac(hp, Int32(i)))
-            let connected = mdrHeadphonesGetPairedDeviceConnected(hp, Int32(i)) != 0
-            newPaired.append(PairedDevice(id: mac, name: name, connected: connected))
+        for dev in hp.pairedDevices {
+            newPaired.append(PairedDevice(id: dev.macAddress, name: dev.name, connected: dev.connected))
         }
         if pairedDevices != newPaired { pairedDevices = newPaired }
 
         // IsReady
-        let newReady = mdrHeadphonesRequestIsReady(hp) == MDR_RESULT_OK
+        let newReady = hp.isReady
         if isReady != newReady { isReady = newReady }
 
         writeSharedStateIfNeeded()

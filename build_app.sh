@@ -9,20 +9,23 @@ EXECUTABLE_NAME="SonyHeadphonesClient"
 BUNDLE_ID="com.mos9527.SonyHeadphonesClient"
 SWIFT_SRC="$ROOT/client-swift"
 RESOURCES="$SWIFT_SRC/SonyHeadphonesClient/Resources"
+MDR_PKG="$ROOT/MDRProtocol"
 
 # Detect architecture
 ARCH="$(uname -m)"
 echo "==> Building for $ARCH"
 
-# Step 1: Build libmdr
-echo "==> Building libmdr..."
-mkdir -p "$BUILD_DIR"
-cd "$BUILD_DIR"
-cmake "$ROOT" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_OSX_ARCHITECTURES="$ARCH" > /dev/null
-cmake --build . --target mdr mdr_PlatformMacOS -- -j"$(sysctl -n hw.logicalcpu)" 2>&1 | tail -1
+# Step 1: Build MDRProtocol Swift Package
+echo "==> Building MDRProtocol..."
+swift build --package-path "$MDR_PKG" -c release --arch "$ARCH" 2>&1 | tail -1
+
+# Create static library from .o files
+MDR_BUILD="$MDR_PKG/.build/${ARCH}-apple-macosx/release"
+ar rcs "$MDR_BUILD/libMDRProtocol.a" "$MDR_BUILD"/MDRProtocol.build/*.swift.o 2>/dev/null
 
 # Step 2: Prepare app bundle
 echo "==> Preparing bundle..."
+mkdir -p "$BUILD_DIR"
 rm -rf "$BUNDLE"
 mkdir -p "$BUNDLE/Contents/MacOS"
 mkdir -p "$BUNDLE/Contents/Resources"
@@ -32,10 +35,8 @@ echo "==> Compiling Swift..."
 SWIFT_FILES=$(find "$SWIFT_SRC" -name '*.swift')
 
 swiftc -target "${ARCH}-apple-macosx14.0" -sdk "$(xcrun --show-sdk-path)" \
-    -import-objc-header "$SWIFT_SRC/SonyHeadphonesClient/Bridge/SonyHeadphonesClient-Bridging-Header.h" \
-    -I "$ROOT/libmdr/include" \
-    -L "$BUILD_DIR/libmdr/src" -L "$BUILD_DIR/libmdr/src/Platform/MacOS" -L "$BUILD_DIR/_deps/fmt-build" \
-    -lmdr -lmdr_PlatformMacOS -lfmt -lstdc++ \
+    -I "$MDR_BUILD/Modules" \
+    -L "$MDR_BUILD" -lMDRProtocol \
     -framework SwiftUI -framework AppKit -framework CoreBluetooth -framework IOBluetooth \
     -o "$BUNDLE/Contents/MacOS/$EXECUTABLE_NAME" \
     $SWIFT_FILES 2>&1 | grep -v "^ld: warning" || true

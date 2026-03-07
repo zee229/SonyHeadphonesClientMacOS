@@ -7,9 +7,6 @@ on:
     branches: [macos-only, main]
   workflow_dispatch:
 
-env:
-  BUILD_TYPE: RelWithDebInfo
-
 jobs:
   build-swift:
     name: Build SwiftUI Client
@@ -17,13 +14,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-      with:
-        submodules: true
 
-    - name: Build libmdr
-      run: |
-        cmake -B build -DCMAKE_BUILD_TYPE=$BUILD_TYPE
-        cmake --build build --target mdr mdr_PlatformMacOS
+    - name: Run MDRProtocol tests
+      run: swift test --package-path MDRProtocol
 
     - name: Build SwiftUI app
       run: |
