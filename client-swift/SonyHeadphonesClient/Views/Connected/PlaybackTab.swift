@@ -14,11 +14,16 @@ struct MediaSource: Identifiable, Equatable {
     }
 
     var sfSymbol: String {
-        id == "Spotify" ? "music.note.list" : "music.quarternote.3"
+        let lower = id.lowercased()
+        if lower.contains("spotify") { return "music.note.list" }
+        if lower.contains("music") { return "music.quarternote.3" }
+        if lower.contains("chrome") || lower.contains("safari") || lower.contains("firefox") || lower.contains("arc") { return "globe" }
+        if lower.contains("vlc") || lower.contains("iina") { return "play.rectangle" }
+        return "speaker.wave.2"
     }
 }
 
-// MARK: - Now Playing Monitor (AppleScript-based)
+// MARK: - Now Playing Monitor (MediaRemote-based)
 
 @MainActor
 class NowPlayingMonitor: ObservableObject {
@@ -26,6 +31,23 @@ class NowPlayingMonitor: ObservableObject {
     @Published var selectedSourceId: String?
 
     private var timer: Timer?
+
+    // MediaRemote function pointers
+    private static let mrBundle: CFBundle? = CFBundleCreate(kCFAllocatorDefault,
+        NSURL(fileURLWithPath: "/System/Library/PrivateFrameworks/MediaRemote.framework"))
+
+    private typealias MRGetInfoFn = @convention(c) (DispatchQueue, @escaping ([String: Any]) -> Void) -> Void
+    private typealias MRGetClientFn = @convention(c) (DispatchQueue, @escaping (AnyObject?) -> Void) -> Void
+
+    private static let getInfo: MRGetInfoFn? = {
+        guard let b = mrBundle, let p = CFBundleGetFunctionPointerForName(b, "MRMediaRemoteGetNowPlayingInfo" as CFString) else { return nil }
+        return unsafeBitCast(p, to: MRGetInfoFn.self)
+    }()
+
+    private static let getClient: MRGetClientFn? = {
+        guard let b = mrBundle, let p = CFBundleGetFunctionPointerForName(b, "MRMediaRemoteGetNowPlayingClient" as CFString) else { return nil }
+        return unsafeBitCast(p, to: MRGetClientFn.self)
+    }()
 
     // Backward-compatible computed properties from selected source
     var title: String { selectedSource?.title ?? "" }
@@ -42,7 +64,7 @@ class NowPlayingMonitor: ObservableObject {
 
     func start() {
         refresh()
-        timer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.refresh() }
         }
     }
@@ -53,109 +75,95 @@ class NowPlayingMonitor: ObservableObject {
     }
 
     private func refresh() {
-        Task.detached {
-            let newSources = Self.queryAllSources()
-            await MainActor.run {
-                self.sources = newSources
-                // Auto-select logic
-                if newSources.isEmpty {
+        // Query MediaRemote for system now playing
+        Self.getClient?(DispatchQueue.main) { [weak self] client in
+            guard let self else { return }
+            let bundleId = (client as? NSObject)?.value(forKey: "bundleIdentifier") as? String
+            let appName = Self.appName(from: bundleId)
+
+            Self.getInfo?(DispatchQueue.main) { [weak self] info in
+                guard let self else { return }
+                let title = info["kMRMediaRemoteNowPlayingInfoTitle"] as? String ?? ""
+                let artist = info["kMRMediaRemoteNowPlayingInfoArtist"] as? String ?? ""
+                let album = info["kMRMediaRemoteNowPlayingInfoAlbum"] as? String ?? ""
+                let rate = info["kMRMediaRemoteNowPlayingInfoPlaybackRate"] as? Double ?? 0
+                let isPlaying = rate > 0
+
+                if !title.isEmpty || isPlaying {
+                    let src = MediaSource(id: appName, title: title, artist: artist, album: album, isPlaying: isPlaying)
+                    self.sources = [src]
+                    self.selectedSourceId = src.id
+                } else {
+                    self.sources = []
                     self.selectedSourceId = nil
-                } else if newSources.count == 1 {
-                    self.selectedSourceId = newSources[0].id
-                } else if let selected = self.selectedSourceId,
-                          !newSources.contains(where: { $0.id == selected }) {
-                    self.selectedSourceId = newSources.first?.id
                 }
             }
         }
     }
 
-    private nonisolated static func queryAllSources() -> [MediaSource] {
-        let script = """
-        set output to ""
-        try
-            if application "Spotify" is running then
-                tell application "Spotify"
-                    set pState to "paused"
-                    if player state is playing then set pState to "playing"
-                    set output to output & "Spotify" & "\\n" & pState & "\\n" & (name of current track) & "\\n" & (artist of current track) & "\\n" & (album of current track) & "\\n---\\n"
-                end tell
-            end if
-        end try
-        try
-            if application "Music" is running then
-                tell application "Music"
-                    set pState to "paused"
-                    if player state is playing then set pState to "playing"
-                    set output to output & "Music" & "\\n" & pState & "\\n" & (name of current track) & "\\n" & (artist of current track) & "\\n" & (album of current track) & "\\n---\\n"
-                end tell
-            end if
-        end try
-        return output
-        """
-
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-        process.arguments = ["-e", script]
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = FileHandle.nullDevice
-
-        var results: [MediaSource] = []
-        do {
-            try process.run()
-            process.waitUntilExit()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            let output = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-
-            let blocks = output.components(separatedBy: "---")
-            for block in blocks {
-                let lines = block.trimmingCharacters(in: .whitespacesAndNewlines).components(separatedBy: "\n")
-                if lines.count >= 5 {
-                    results.append(MediaSource(
-                        id: lines[0],
-                        title: lines[2],
-                        artist: lines[3],
-                        album: lines[4],
-                        isPlaying: lines[1] == "playing"
-                    ))
-                }
-            }
-        } catch {}
-
-        return results
+    private static func appName(from bundleId: String?) -> String {
+        guard let bundleId else { return "Unknown" }
+        // Try to get the display name from the running app
+        if let app = NSRunningApplication.runningApplications(withBundleIdentifier: bundleId).first,
+           let name = app.localizedName {
+            return name
+        }
+        // Fallback: extract from bundle ID
+        let last = bundleId.components(separatedBy: ".").last ?? bundleId
+        return last.capitalized
     }
 
-    // MARK: - AppleScript Playback Controls
+    // MARK: - Playback Controls
 
     func sendPlayPause(for sourceId: String) {
-        let cmd: String
         if sourceId == "Spotify" {
-            cmd = "tell application \"Spotify\" to playpause"
+            runAppleScript("tell application \"Spotify\" to playpause")
+        } else if sourceId == "Apple Music" || sourceId == "Music" {
+            runAppleScript("tell application \"Music\" to playpause")
         } else {
-            cmd = "tell application \"Music\" to playpause"
+            simulateMediaKey(key: 16) // play/pause
         }
-        runAppleScript(cmd)
     }
 
     func sendNextTrack(for sourceId: String) {
-        let cmd: String
         if sourceId == "Spotify" {
-            cmd = "tell application \"Spotify\" to next track"
+            runAppleScript("tell application \"Spotify\" to next track")
+        } else if sourceId == "Apple Music" || sourceId == "Music" {
+            runAppleScript("tell application \"Music\" to next track")
         } else {
-            cmd = "tell application \"Music\" to next track"
+            simulateMediaKey(key: 17) // next
         }
-        runAppleScript(cmd)
     }
 
     func sendPreviousTrack(for sourceId: String) {
-        let cmd: String
         if sourceId == "Spotify" {
-            cmd = "tell application \"Spotify\" to previous track"
+            runAppleScript("tell application \"Spotify\" to previous track")
+        } else if sourceId == "Apple Music" || sourceId == "Music" {
+            runAppleScript("tell application \"Music\" to back track")
         } else {
-            cmd = "tell application \"Music\" to back track"
+            simulateMediaKey(key: 18) // previous
         }
-        runAppleScript(cmd)
+    }
+
+    private func simulateMediaKey(key: UInt32) {
+        func doKey(down: Bool) {
+            let flags: NSEvent.EventType = down ? .systemDefined : .systemDefined
+            let data1 = Int((key << 16) | (down ? 0x0A00 : 0x0B00))
+            let event = NSEvent.otherEvent(
+                with: flags,
+                location: .zero,
+                modifierFlags: NSEvent.ModifierFlags(rawValue: (down ? 0xa00 : 0xb00)),
+                timestamp: 0,
+                windowNumber: 0,
+                context: nil,
+                subtype: 8,
+                data1: data1,
+                data2: -1
+            )
+            event?.cgEvent?.post(tap: .cghidEventTap)
+        }
+        doKey(down: true)
+        doKey(down: false)
     }
 
     private func runAppleScript(_ script: String) {
