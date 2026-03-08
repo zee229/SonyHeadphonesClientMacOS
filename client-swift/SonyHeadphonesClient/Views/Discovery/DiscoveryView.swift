@@ -10,7 +10,7 @@ struct DiscoveryView: View {
                 Image(systemName: "headphones")
                     .font(.system(size: 40, weight: .thin))
                     .foregroundColor(.accentColor)
-                Text("Sony Headphones Client")
+                Text("SoundPilot")
                     .font(.title3)
                     .fontWeight(.semibold)
             }
@@ -87,7 +87,7 @@ struct DiscoveryView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
                 if !sonyDevices.isEmpty {
-                    Text("Sony Devices")
+                    Text("Compatible Devices")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .padding(.horizontal, 4)

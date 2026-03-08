@@ -41,7 +41,7 @@ struct AboutTab: View {
 
                 // App info
                 VStack(spacing: 4) {
-                    Text("Sony Headphones Client")
+                    Text("SoundPilot")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Text("v2.0.0")
@@ -100,6 +100,7 @@ struct AppSettingsView: View {
                 .pickerStyle(.segmented)
             }
 
+            #if !APPSTORE
             // Window
             SoundCard {
                 Label("Window", systemImage: "macwindow")
@@ -116,6 +117,7 @@ struct AppSettingsView: View {
                     setWindowLevel(alwaysOnTop: newValue)
                 }
             }
+            #endif
 
             // Connection
             SoundCard {
@@ -269,6 +271,7 @@ struct AppSettingsView: View {
                     .controlSize(.small)
                 }
 
+                #if !APPSTORE
                 Divider()
 
                 HStack {
@@ -289,20 +292,23 @@ struct AppSettingsView: View {
                     .controlSize(.small)
                     .help("Open Automation settings")
                 }
+                #endif
             }
         }
+        #if !APPSTORE
         .onAppear {
             setWindowLevel(alwaysOnTop: alwaysOnTop)
         }
+        #endif
     }
 
     private func openPrivacySettings(_ section: String) {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-        process.arguments = ["x-apple.systempreferences:com.apple.preference.security?\(section)"]
-        try? process.run()
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(section)") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
+    #if !APPSTORE
     private func setWindowLevel(alwaysOnTop: Bool) {
         DispatchQueue.main.async {
             for window in NSApplication.shared.windows {
@@ -312,6 +318,7 @@ struct AppSettingsView: View {
             }
         }
     }
+    #endif
 }
 
 struct InfoRow: View {

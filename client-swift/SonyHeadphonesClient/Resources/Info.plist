@@ -11,7 +11,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Sony Headphones</string>
+	<string>SoundPilot</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -25,8 +25,8 @@
 	<key>CFBundleIconName</key>
 	<string>AppIcon</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>This app uses Bluetooth to interface with your Sony TWS devices.</string>
+	<string>SoundPilot uses Bluetooth to communicate with your headphones.</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>Copyleft 2026, mos9527</string>
+	<string>Copyright 2026, YOURNAME</string>
 </dict>
 </plist>

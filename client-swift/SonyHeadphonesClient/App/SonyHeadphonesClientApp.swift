@@ -87,11 +87,16 @@ struct SonyHeadphonesClientApp: App {
     }
 
     private func relaunchApp() {
+        #if APPSTORE
+        NSWorkspace.shared.open(Bundle.main.bundleURL)
+        NSApp.terminate(nil)
+        #else
         let task = Process()
         task.executableURL = URL(fileURLWithPath: "/bin/sh")
         task.arguments = ["-c", "sleep 0.3 && open -a \"\(Bundle.main.bundleURL.path)\""]
         try? task.run()
         NSApp.terminate(nil)
+        #endif
     }
 
     private func registerLaunchAtLoginIfNeeded() {

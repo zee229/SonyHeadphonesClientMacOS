@@ -3,13 +3,27 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 BUILD_DIR="$ROOT/build"
-APP_NAME="Sony Headphones"
+APP_NAME="SoundPilot"
 BUNDLE="$BUILD_DIR/$APP_NAME.app"
-EXECUTABLE_NAME="SonyHeadphonesClient"
-BUNDLE_ID="com.mos9527.SonyHeadphonesClient"
+EXECUTABLE_NAME="SoundPilot"
+BUNDLE_ID="com.YOURNAME.SoundPilot"
 SWIFT_SRC="$ROOT/client-swift"
 RESOURCES="$SWIFT_SRC/SonyHeadphonesClient/Resources"
 MDR_PKG="$ROOT/MDRProtocol"
+
+# Parse flags
+APPSTORE=false
+SIGN_IDENTITY=""
+for arg in "$@"; do
+    case "$arg" in
+        --appstore) APPSTORE=true ;;
+        --sign=*) SIGN_IDENTITY="${arg#--sign=}" ;;
+    esac
+done
+
+if $APPSTORE; then
+    echo "==> Building for App Store"
+fi
 
 # Detect architecture
 ARCH="$(uname -m)"
@@ -34,10 +48,16 @@ mkdir -p "$BUNDLE/Contents/Resources"
 echo "==> Compiling Swift..."
 SWIFT_FILES=$(find "$SWIFT_SRC" -name '*.swift')
 
+EXTRA_FLAGS=""
+if $APPSTORE; then
+    EXTRA_FLAGS="-D APPSTORE"
+fi
+
 swiftc -target "${ARCH}-apple-macosx14.0" -sdk "$(xcrun --show-sdk-path)" \
     -I "$MDR_BUILD/Modules" \
     -L "$MDR_BUILD" -lMDRProtocol \
     -framework SwiftUI -framework AppKit -framework CoreBluetooth -framework IOBluetooth \
+    $EXTRA_FLAGS \
     -o "$BUNDLE/Contents/MacOS/$EXECUTABLE_NAME" \
     $SWIFT_FILES 2>&1 | grep -v "^ld: warning" || true
 
@@ -53,7 +73,22 @@ if [ -f "$RESOURCES/AppIcon.icns" ]; then
     echo "==> Icon copied"
 fi
 
-# Step 6: Register with LaunchServices
+# Step 6: Code signing
+if [ -n "$SIGN_IDENTITY" ]; then
+    echo "==> Signing..."
+    if $APPSTORE; then
+        ENTITLEMENTS="$RESOURCES/SoundPilot.entitlements"
+    else
+        ENTITLEMENTS="$RESOURCES/SoundPilot-Direct.entitlements"
+    fi
+    codesign --force --options runtime \
+        --sign "$SIGN_IDENTITY" \
+        --entitlements "$ENTITLEMENTS" \
+        "$BUNDLE"
+    echo "==> Signed with: $SIGN_IDENTITY"
+fi
+
+# Step 7: Register with LaunchServices
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$BUNDLE" 2>/dev/null || true
 
 echo ""

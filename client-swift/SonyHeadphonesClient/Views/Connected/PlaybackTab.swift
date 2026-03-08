@@ -23,7 +23,11 @@ struct MediaSource: Identifiable, Equatable {
     }
 }
 
-// MARK: - Now Playing Monitor (MediaRemote-based)
+// MARK: - Now Playing Monitor
+
+#if !APPSTORE
+
+// Full NowPlayingMonitor with MediaRemote + AppleScript + CGEvent (direct distribution)
 
 @MainActor
 class NowPlayingMonitor: ObservableObject {
@@ -177,6 +181,33 @@ class NowPlayingMonitor: ObservableObject {
         }
     }
 }
+
+#else
+
+// Stub NowPlayingMonitor for App Store — AVRCP only, no MediaRemote/AppleScript/CGEvent
+
+@MainActor
+class NowPlayingMonitor: ObservableObject {
+    @Published var sources: [MediaSource] = []
+    @Published var selectedSourceId: String?
+
+    var title: String { "" }
+    var artist: String { "" }
+    var album: String { "" }
+    var source: String { "" }
+
+    var selectedSource: MediaSource? { nil }
+    var hasMultipleSources: Bool { false }
+
+    func start() {}
+    func stop() {}
+
+    func sendPlayPause(for sourceId: String) {}
+    func sendNextTrack(for sourceId: String) {}
+    func sendPreviousTrack(for sourceId: String) {}
+}
+
+#endif
 
 // MARK: - Play Button Modifier
 

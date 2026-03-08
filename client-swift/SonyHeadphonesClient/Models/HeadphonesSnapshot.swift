@@ -16,7 +16,7 @@ struct HeadphonesSnapshot: Codable {
     var isPlaying: Bool
     var lastUpdated: Date
 
-    static let suiteName = "group.com.mos9527.SonyHeadphonesClient"
+    static let suiteName = "group.com.YOURNAME.SoundPilot"
     static let key = "headphonesSnapshot"
 
     static func disconnected() -> HeadphonesSnapshot {

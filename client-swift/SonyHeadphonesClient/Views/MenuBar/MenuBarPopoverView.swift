@@ -371,7 +371,7 @@ struct MenuBarPopoverView: View {
 
     private func openMainWindow() {
         NSApp.activate(ignoringOtherApps: true)
-        if let window = NSApp.windows.first(where: { $0.title.contains("Sony") || $0.contentView is NSHostingView<ContentView> }) {
+        if let window = NSApp.windows.first(where: { $0.title.contains("SoundPilot") || $0.contentView is NSHostingView<ContentView> }) {
             window.makeKeyAndOrderFront(nil)
         } else {
             for window in NSApp.windows where !window.title.isEmpty && window.level == .normal {

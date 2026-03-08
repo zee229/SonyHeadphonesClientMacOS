@@ -3,16 +3,26 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 BUILD_DIR="$ROOT/build"
-APP_NAME="Sony Headphones"
+APP_NAME="SoundPilot"
 BUNDLE="$BUILD_DIR/$APP_NAME.app"
 VERSION=$(defaults read "$BUNDLE/Contents/Info.plist" CFBundleShortVersionString 2>/dev/null || echo "2.0.0")
-DMG_NAME="SonyHeadphones-${VERSION}.dmg"
+DMG_NAME="SoundPilot-${VERSION}.dmg"
 DMG_PATH="$BUILD_DIR/$DMG_NAME"
 DMG_RW="$BUILD_DIR/_rw.dmg"
 STAGING="$BUILD_DIR/dmg-staging"
 BG_IMG="$ROOT/client-swift/SonyHeadphonesClient/Resources/dmg-background.png"
 BG_IMG_2X="$ROOT/client-swift/SonyHeadphonesClient/Resources/dmg-background@2x.png"
-VOL_NAME="$APP_NAME"
+VOL_NAME="SoundPilot"
+
+# Parse flags
+SIGN_IDENTITY=""
+NOTARIZE_PROFILE=""
+for arg in "$@"; do
+    case "$arg" in
+        --sign=*) SIGN_IDENTITY="${arg#--sign=}" ;;
+        --notarize=*) NOTARIZE_PROFILE="${arg#--notarize=}" ;;
+    esac
+done
 
 WIN_W=660
 WIN_H=400
@@ -48,7 +58,11 @@ hdiutil create \
     -fs HFS+ \
     "$DMG_RW" > /dev/null
 
-# Step 3: Mount and style with AppleScript
+# Step 3: Eject any existing volumes with same name, then mount
+for vol in /Volumes/"$VOL_NAME"*; do
+    [ -d "$vol" ] && hdiutil detach "$vol" 2>/dev/null || true
+done
+
 MOUNT_OUT=$(hdiutil attach -readwrite -noverify "$DMG_RW" | tail -1)
 MOUNT_POINT=$(echo "$MOUNT_OUT" | awk -F'\t' '{print $NF}' | xargs)
 DEVICE=$(echo "$MOUNT_OUT" | awk '{print $1}')
@@ -60,6 +74,8 @@ osascript <<APPLESCRIPT
 tell application "Finder"
     tell disk "$VOL_NAME"
         open
+        delay 1
+
         set current view of container window to icon view
         set toolbar visible of container window to false
         set statusbar visible of container window to false
@@ -78,7 +94,7 @@ tell application "Finder"
         close
         open
         update without registering applications
-        delay 1
+        delay 2
         close
     end tell
 end tell
@@ -98,6 +114,22 @@ hdiutil detach "$DEVICE" -quiet
 hdiutil convert "$DMG_RW" -format UDZO -imagekey zlib-level=9 -o "$DMG_PATH" > /dev/null
 rm -f "$DMG_RW"
 rm -rf "$STAGING"
+
+# Step 6: Sign DMG
+if [ -n "$SIGN_IDENTITY" ]; then
+    echo "==> Signing DMG..."
+    codesign --force --sign "$SIGN_IDENTITY" "$DMG_PATH"
+fi
+
+# Step 7: Notarize
+if [ -n "$NOTARIZE_PROFILE" ]; then
+    echo "==> Submitting for notarization..."
+    xcrun notarytool submit "$DMG_PATH" \
+        --keychain-profile "$NOTARIZE_PROFILE" \
+        --wait
+    echo "==> Stapling notarization ticket..."
+    xcrun stapler staple "$DMG_PATH"
+fi
 
 DMG_SIZE=$(du -h "$DMG_PATH" | cut -f1 | xargs)
 echo ""

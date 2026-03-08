@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Sony Headphones is a macOS-only client for Sony headphones using the MDR (Mobile Device Receiver) protocol. It consists of two main components: `MDRProtocol/` (pure Swift protocol library) and `client-swift/` (native SwiftUI GUI).
+SoundPilot (formerly "Sony Headphones Client") is a macOS-only client for Sony headphones using the MDR (Mobile Device Receiver) protocol. It consists of two main components: `MDRProtocol/` (pure Swift protocol library) and `client-swift/` (native SwiftUI GUI). Supports dual distribution: direct (Developer ID + notarization + DMG) and Mac App Store (sandboxed).
 
 ## Build Commands
 
@@ -12,8 +12,20 @@ Sony Headphones is a macOS-only client for Sony headphones using the MDR (Mobile
 # Quick build (recommended) — builds MDRProtocol + SwiftUI app into .app bundle
 ./build_app.sh
 
+# App Store build — excludes MediaRemote, AppleScript, CGEvent, floating windows
+./build_app.sh --appstore
+
+# Signed build (direct distribution)
+./build_app.sh --sign="Developer ID Application: Your Name (TEAMID)"
+
+# Signed App Store build
+./build_app.sh --appstore --sign="3rd Party Mac Developer Application: Your Name (TEAMID)"
+
 # Build DMG installer (calls build_app.sh if needed)
 ./build_dmg.sh
+
+# Signed + notarized DMG
+./build_dmg.sh --sign="Developer ID Application: Your Name (TEAMID)" --notarize="PROFILE"
 
 # Run MDRProtocol tests
 swift test --package-path MDRProtocol
@@ -23,8 +35,8 @@ swift test --package-path MDRProtocol
 
 ## Build Scripts
 
-- **`build_app.sh`** — One-step CLI build: `swift build` MDRProtocol → `ar` static library → `swiftc` SwiftUI app → assemble .app bundle with Info.plist, icon, and resources. Output: `build/Sony Headphones.app`
-- **`build_dmg.sh`** — Creates styled DMG installer with custom background, positioned icons, white Finder labels. Calls `build_app.sh` if app not already built. Output: `build/SonyHeadphones-{version}.dmg`
+- **`build_app.sh`** — One-step CLI build: `swift build` MDRProtocol → `ar` static library → `swiftc` SwiftUI app → assemble .app bundle with Info.plist, icon, and resources. Supports `--appstore` (adds `-D APPSTORE` to swiftc) and `--sign=IDENTITY` (code signing with entitlements). Output: `build/SoundPilot.app`
+- **`build_dmg.sh`** — Creates styled DMG installer with custom background, positioned icons, white Finder labels. Supports `--sign=IDENTITY` and `--notarize=PROFILE`. Calls `build_app.sh` if app not already built. Output: `build/SoundPilot-{version}.dmg`
 
 ## Architecture
 
@@ -41,7 +53,7 @@ swift test --package-path MDRProtocol
   - `Sources/MDRProtocol/Platform/` — IOBluetooth RFCOMM transport: `BluetoothTransport.swift`
   - `Tests/MDRProtocolTests/` — 402 tests covering all layers
 
-- **`client-swift/`** — Native SwiftUI GUI application ("Sony Headphones"). Xcode project at `SonyHeadphonesClient.xcodeproj`. Uses `MDRProtocol` directly (no bridging header). Key files:
+- **`client-swift/`** — Native SwiftUI GUI application ("SoundPilot"). Xcode project at `SonyHeadphonesClient.xcodeproj`. Uses `MDRProtocol` directly (no bridging header). Key files:
   - `App/SonyHeadphonesClientApp.swift` — `@main` entry point, `WindowGroup`, `Settings` scene (Cmd+,), `AppTheme` enum, theme management via `NSApp.appearance`
   - `App/ContentView.swift` — State-machine router based on connection state
   - `Models/HeadphonesManager.swift` — Central `@MainActor ObservableObject` with 60Hz poll loop. Uses `MDRHeadphones` directly via `import MDRProtocol`. Bridges MDRProtocol enum types to UI enum types via raw values.
@@ -49,9 +61,11 @@ swift test --package-path MDRProtocol
   - `Models/DeviceState.swift` — Swift value types for connection/battery/device state
   - `Models/HeadphonesSnapshot.swift` — `Codable` snapshot struct for widget data sharing via `UserDefaults(suiteName:)`
   - `Views/` — SwiftUI views organized by connection state (Discovery, Connecting, Connected, Disconnected). About tab doubles as app settings (theme, window, permissions).
-  - `Views/Connected/PlaybackTab.swift` — Playback tab with `NowPlayingMonitor` (multi-source AppleScript polling), `MediaSource` model, `SourcePill` view, and smart routing (AppleScript for app-targeted controls, AVRCP fallback). `AudioVisualizerView` animated bars.
+  - `Views/Connected/PlaybackTab.swift` — Playback tab with `NowPlayingMonitor` (MediaRemote + AppleScript in direct build; stub in App Store build via `#if !APPSTORE`), `MediaSource` model, `SourcePill` view, and smart routing (AppleScript for app-targeted controls, AVRCP fallback). `AudioVisualizerView` animated bars.
   - `Views/MenuBar/MenuBarPopoverView.swift` — Menu bar popover: battery, NC controls, playback with multi-source pills (`MenuBarSourcePill`), volume. Uses `MenuBarExtra` scene with `.window` style.
-  - `Resources/Info.plist` — Bundle config (name: "Sony Headphones", icon, Bluetooth usage). Contains `$(EXECUTABLE_NAME)` / `$(PRODUCT_BUNDLE_IDENTIFIER)` Xcode variables resolved by `build_app.sh` at build time.
+  - `Resources/Info.plist` — Bundle config (name: "SoundPilot", icon, Bluetooth usage). Contains `$(EXECUTABLE_NAME)` / `$(PRODUCT_BUNDLE_IDENTIFIER)` Xcode variables resolved by `build_app.sh` at build time.
+  - `Resources/SoundPilot.entitlements` — App Store entitlements (sandbox + bluetooth + network)
+  - `Resources/SoundPilot-Direct.entitlements` — Direct distribution entitlements (unsigned executable memory)
   - `Resources/AppIcon.icns` — App icon for CLI builds (all sizes 16-512@2x)
   - `Resources/Assets.xcassets/AppIcon.appiconset/` — App icon for Xcode builds
   - `Resources/dmg-background.png`, `dmg-background@2x.png` — DMG installer background
@@ -83,11 +97,23 @@ swift test --package-path MDRProtocol
 
 GitHub Actions workflow (`.github/workflows/cmake.yml`): runs MDRProtocol tests, builds the SwiftUI client (app + DMG) on every push/PR to `main` and `macos-only`. Uploads DMG as artifact.
 
+## Dual Distribution (Direct + App Store)
+
+The app supports two distribution channels via compile-time `#if APPSTORE` / `#if !APPSTORE` guards:
+
+- **Direct distribution** (default `./build_app.sh`): Full features — MediaRemote now-playing detection, AppleScript playback controls, CGEvent media keys, Always on Top window level. Signed with Developer ID + notarized.
+- **App Store** (`./build_app.sh --appstore`): Sandboxed build that excludes all private/banned APIs. `NowPlayingMonitor` is a stub (AVRCP-only playback). No Automation section in About. No Always on Top. Uses `NSWorkspace` for relaunch instead of `Process`.
+
+Files with `#if !APPSTORE` guards:
+- `PlaybackTab.swift` — Full `NowPlayingMonitor` vs stub
+- `SonyHeadphonesClientApp.swift` — `relaunchApp()` implementation
+- `AboutTab.swift` — Automation permission row, Always on Top toggle, `setWindowLevel()`
+
 ## Key Conventions
 
 - Pure Swift project (Swift 6.0), no C++ or CMake needed
 - macOS 14+ deployment target, macOS 26+ for Liquid Glass
 - macOS only
-- App name: "Sony Headphones", bundle ID: `com.mos9527.SonyHeadphonesClient`
+- App name: "SoundPilot", bundle ID: `com.YOURNAME.SoundPilot`
 - MDRProtocol uses SCREAMING_CASE enum values (`.NC`, `.ASM`, `.OFF`); client MDREnums.swift uses camelCase (`.nc`, `.asm_`, `.off`) with `displayName` properties for UI
 - HeadphonesManager bridges between MDRProtocol and UI types via raw values
