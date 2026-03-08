@@ -130,17 +130,23 @@ final class HeadphonesManager: ObservableObject {
     private var connectedDeviceMac: String = ""
 
     // MARK: - Private
-    private let transport = BluetoothTransport()
+    private let transport: MDRConnectionTransport
     private var headphones: MDRHeadphones?
     private var pollTimer: AnyCancellable?
     private var isPollingSuppressed = false
     private var lastSnapshotWrite: Date = .distantPast
 
+    // Reconnect
+    private var reconnectTimer: AnyCancellable?
+    private(set) var reconnectStateMachine = ReconnectStateMachine()
+    private var isManualDisconnect: Bool = false
+
     // Triggers macOS Bluetooth permission dialog on first launch
     private var centralManager: CBCentralManager?
 
     // MARK: - Lifecycle
-    init() {
+    init(transport: MDRConnectionTransport = BluetoothTransport()) {
+        self.transport = transport
         centralManager = CBCentralManager(delegate: nil, queue: nil)
         connectionState = .discovering
         refreshDevices()
@@ -149,12 +155,13 @@ final class HeadphonesManager: ObservableObject {
 
     deinit {
         pollTimer?.cancel()
+        reconnectTimer?.cancel()
         transport.disconnect()
     }
 
     // MARK: - Device Discovery
     func refreshDevices() {
-        devices = BluetoothTransport.pairedDevices()
+        devices = transport.pairedDevices()
 
         // Default select first Sony device
         selectedDeviceIndex = 0
@@ -230,12 +237,16 @@ final class HeadphonesManager: ObservableObject {
     }
 
     func disconnect() {
-        pollTimer?.cancel()
-        pollTimer = nil
-        headphones = nil
-        transport.disconnect()
+        isManualDisconnect = true
+        performFullCleanup()
         connectionState = .discovering
         refreshDevices()
+    }
+
+    func cancelReconnect() {
+        performFullCleanup()
+        let action = reconnectStateMachine.cancel()
+        applyAction(action)
     }
 
     func shutdown() {
@@ -303,28 +314,37 @@ final class HeadphonesManager: ObservableObject {
         let state = transport.poll(timeoutMS: 0)
         switch state {
         case .connected:
-            // Connected! Create headphones
             let hp = MDRHeadphones(transport: transport)
             headphones = hp
             hp.requestInitV2()
             connectionState = .connected
+            let _ = reconnectStateMachine.handleConnected()
+            isManualDisconnect = false
             if rememberedDeviceMac != connectedDeviceMac {
                 showRememberDeviceAlert = true
             }
 
         case .connecting:
-            // Still connecting
             connectionErrorMessage = transport.lastError
 
         case .error(let msg):
             connectionErrorMessage = msg
             transport.disconnect()
-            connectionState = .error(connectionErrorMessage)
+            if reconnectStateMachine.isActive {
+                applyAction(reconnectStateMachine.handleConnectFailed())
+            } else {
+                handleUnexpectedDisconnect(error: connectionErrorMessage)
+            }
 
         case .disconnected:
             connectionErrorMessage = transport.lastError
             transport.disconnect()
-            connectionState = .error(connectionErrorMessage.isEmpty ? "Disconnected" : connectionErrorMessage)
+            if reconnectStateMachine.isActive {
+                applyAction(reconnectStateMachine.handleConnectFailed())
+            } else {
+                let errorMsg = connectionErrorMessage.isEmpty ? "Disconnected" : connectionErrorMessage
+                handleUnexpectedDisconnect(error: errorMsg)
+            }
         }
     }
 
@@ -343,8 +363,7 @@ final class HeadphonesManager: ObservableObject {
                 }
             case .error:
                 headphonesErrorMessage = hp.lastError
-                transport.disconnect()
-                connectionState = .error("Disconnected: \(headphonesErrorMessage)")
+                handleUnexpectedDisconnect(error: "Disconnected: \(headphonesErrorMessage)")
                 return
             default:
                 break
@@ -352,6 +371,116 @@ final class HeadphonesManager: ObservableObject {
         }
 
         readAllFields()
+    }
+
+    // MARK: - Cleanup & Reconnect
+
+    private func performFullCleanup() {
+        pollTimer?.cancel()
+        pollTimer = nil
+        reconnectTimer?.cancel()
+        reconnectTimer = nil
+        headphones = nil
+        transport.disconnect()
+
+        batteryL = .init()
+        batteryR = .init()
+        batteryCase = .init()
+
+        playTrackTitle = ""
+        playTrackAlbum = ""
+        playTrackArtist = ""
+        playPause = .unsettled
+
+        writeDisconnectedSnapshot()
+    }
+
+    private func handleUnexpectedDisconnect(error: String) {
+        let deviceMac = connectedDeviceMac
+        let deviceName = modelName.isEmpty ? (rememberedDeviceName ?? "") : modelName
+
+        performFullCleanup()
+
+        if isManualDisconnect {
+            isManualDisconnect = false
+            connectionState = .error(error)
+            return
+        }
+
+        if ReconnectStateMachine.shouldReconnect(deviceMac: deviceMac, isManualDisconnect: false) {
+            let action = reconnectStateMachine.handleDisconnect(deviceMac: deviceMac, deviceName: deviceName)
+            applyAction(action)
+        } else {
+            connectionState = .error(error)
+        }
+    }
+
+    private func applyAction(_ action: ReconnectAction) {
+        switch action {
+        case .none:
+            break
+
+        case .scheduleRetry(let delay, let attempt, let maxAttempts):
+            connectionState = .reconnecting(
+                attempt: attempt,
+                maxAttempts: maxAttempts,
+                deviceName: reconnectStateMachine.deviceName
+            )
+            reconnectTimer?.cancel()
+            reconnectTimer = Timer.publish(every: delay, on: .main, in: .common)
+                .autoconnect()
+                .first()
+                .sink { [weak self] _ in
+                    guard let self else { return }
+                    let action = self.reconnectStateMachine.timerFired()
+                    self.applyAction(action)
+                }
+
+        case .attemptConnect(let mac):
+            reconnectTimer?.cancel()
+            reconnectTimer = nil
+            refreshDevices()
+
+            var deviceIndex: Int?
+            for (i, _) in devices.enumerated() {
+                if deviceMac(at: i) == mac {
+                    deviceIndex = i
+                    break
+                }
+            }
+
+            guard let idx = deviceIndex else {
+                applyAction(reconnectStateMachine.handleDeviceNotFound())
+                return
+            }
+
+            selectedDeviceIndex = idx
+            connectedDeviceMac = mac
+            transport.connect(macAddress: mac)
+
+            if case .error(_) = transport.connectionState {
+                transport.disconnect()
+                applyAction(reconnectStateMachine.handleConnectFailed())
+                return
+            }
+
+            connectionState = .connecting
+            startPollTimer()
+
+        case .giveUp(let error):
+            connectionState = .error(error)
+
+        case .resetToDiscovery:
+            connectionState = .discovering
+            refreshDevices()
+        }
+    }
+
+    private func writeDisconnectedSnapshot() {
+        let snapshot = HeadphonesSnapshot.disconnected()
+        if let data = try? JSONEncoder().encode(snapshot) {
+            UserDefaults(suiteName: HeadphonesSnapshot.suiteName)?.set(data, forKey: HeadphonesSnapshot.key)
+        }
     }
 
     // MARK: - Read all fields from MDRHeadphones

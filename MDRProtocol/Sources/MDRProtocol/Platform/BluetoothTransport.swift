@@ -27,7 +27,7 @@ public let kMDRServiceUUID = "956C7B26-D49A-4BA8-B03F-B17D393CB6E2"
 /// Implements MDRTransport for send/receive, plus connect/disconnect/poll.
 ///
 /// Not thread-safe for send/receive. Buffer access is locked for delegate callbacks.
-public final class BluetoothTransport: NSObject, MDRTransport, IOBluetoothRFCOMMChannelDelegate {
+public final class BluetoothTransport: NSObject, MDRConnectionTransport, IOBluetoothRFCOMMChannelDelegate {
     // MARK: - State
 
     public private(set) var connectionState: BluetoothConnectionState = .disconnected
@@ -68,9 +68,14 @@ public final class BluetoothTransport: NSObject, MDRTransport, IOBluetoothRFCOMM
 
     // MARK: - Connect
 
+    /// Connect to a device by MAC address (protocol conformance).
+    public func connect(macAddress: String) {
+        connect(macAddress: macAddress, serviceUUID: kMDRServiceUUID)
+    }
+
     /// Connect to a device by MAC address and service UUID.
     /// This is asynchronous — call `poll()` to drive the connection.
-    public func connect(macAddress: String, serviceUUID: String = kMDRServiceUUID) {
+    public func connect(macAddress: String, serviceUUID: String) {
         connectionState = .connecting
         lastError = ""
 
@@ -133,6 +138,11 @@ public final class BluetoothTransport: NSObject, MDRTransport, IOBluetoothRFCOMM
     }
 
     // MARK: - Device Discovery
+
+    /// Returns a list of paired Bluetooth devices (instance method for protocol conformance).
+    public func pairedDevices() -> [MDRBluetoothDevice] {
+        Self.pairedDevices()
+    }
 
     /// Returns a list of paired Bluetooth devices.
     public static func pairedDevices() -> [MDRBluetoothDevice] {

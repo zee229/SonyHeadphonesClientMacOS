@@ -19,6 +19,11 @@ struct MenuBarPopoverView: View {
         manager.connectionState == .connected
     }
 
+    private var isReconnecting: Bool {
+        if case .reconnecting = manager.connectionState { return true }
+        return false
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             if isConnected {
@@ -315,12 +320,26 @@ struct MenuBarPopoverView: View {
     @ViewBuilder
     private var disconnectedContent: some View {
         VStack(spacing: 8) {
-            Image(systemName: "headphones")
-                .font(.system(size: 28, weight: .thin))
-                .foregroundColor(.secondary)
-            Text("Not Connected")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+            if isReconnecting {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .font(.system(size: 28, weight: .thin))
+                    .foregroundColor(.accentColor)
+                Text("Reconnecting...")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                if case .reconnecting(let attempt, let maxAttempts, _) = manager.connectionState {
+                    Text("Attempt \(attempt) of \(maxAttempts)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            } else {
+                Image(systemName: "headphones")
+                    .font(.system(size: 28, weight: .thin))
+                    .foregroundColor(.secondary)
+                Text("Not Connected")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 20)
@@ -348,6 +367,12 @@ struct MenuBarPopoverView: View {
             if isConnected {
                 Button("Disconnect") {
                     manager.disconnect()
+                }
+                .font(.caption)
+                .foregroundColor(.secondary)
+            } else if isReconnecting {
+                Button("Cancel Reconnect") {
+                    manager.cancelReconnect()
                 }
                 .font(.caption)
                 .foregroundColor(.secondary)

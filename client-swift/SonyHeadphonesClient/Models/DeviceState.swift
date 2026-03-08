@@ -5,6 +5,7 @@ enum ConnectionState: Equatable {
     case discovering
     case connecting
     case connected
+    case reconnecting(attempt: Int, maxAttempts: Int, deviceName: String)
     case error(String)
 }
 

@@ -14,6 +14,8 @@ struct ContentView: View {
                 ConnectingView()
             case .connected:
                 ConnectedView()
+            case .reconnecting(let attempt, let maxAttempts, let deviceName):
+                ReconnectingView(attempt: attempt, maxAttempts: maxAttempts, deviceName: deviceName)
             case .error(let message):
                 DisconnectedView(message: message)
             }
