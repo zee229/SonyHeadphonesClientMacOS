@@ -53,7 +53,7 @@ struct HeaderView: View {
             .padding(.top, 8)
 
             // Battery + Now Playing
-            HStack(alignment: .top, spacing: 16) {
+            HStack(alignment: .top, spacing: 12) {
                 // Battery column
                 VStack(alignment: .leading, spacing: 4) {
                     let supportSingle = manager.supports(.batteryLevelIndicator) || manager.supports(.batteryLevelWithThreshold)
@@ -75,24 +75,23 @@ struct HeaderView: View {
                         BatteryRow(label: "Case", battery: manager.batteryCase)
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
 
                 // Now Playing column
-                VStack(alignment: .leading, spacing: 2) {
-                    Label("Now Playing", systemImage: "speaker.wave.2")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    if !manager.playTrackTitle.isEmpty {
+                if !manager.playTrackTitle.isEmpty {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Label("Now Playing", systemImage: "speaker.wave.2")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                         Text(manager.playTrackTitle).font(.caption).lineLimit(1)
+                        if !manager.playTrackAlbum.isEmpty {
+                            Text(manager.playTrackAlbum).font(.caption2).foregroundColor(.secondary).lineLimit(1)
+                        }
+                        if !manager.playTrackArtist.isEmpty {
+                            Text(manager.playTrackArtist).font(.caption2).foregroundColor(.secondary).lineLimit(1)
+                        }
                     }
-                    if !manager.playTrackAlbum.isEmpty {
-                        Text(manager.playTrackAlbum).font(.caption2).foregroundColor(.secondary).lineLimit(1)
-                    }
-                    if !manager.playTrackArtist.isEmpty {
-                        Text(manager.playTrackArtist).font(.caption2).foregroundColor(.secondary).lineLimit(1)
-                    }
+                    .frame(maxWidth: 180, alignment: .trailing)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 8)
