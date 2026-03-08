@@ -617,3 +617,152 @@ struct MDRHeadphonesRoundtripTests {
         #expect(hp.protocolInfo.version == 2)
     }
 }
+
+// MARK: - Transport Error Handling
+
+private struct TransportError: Error {}
+
+private final class ThrowingMockTransport: MDRTransport {
+    var sentData: [Data] = []
+    var receiveQueue: [Data] = []
+    var shouldThrowOnSend = false
+    var shouldThrowOnReceive = false
+
+    func send(_ data: Data) throws -> Int {
+        if shouldThrowOnSend { throw TransportError() }
+        sentData.append(data)
+        return data.count
+    }
+
+    func receive(maxLength: Int) throws -> Data {
+        if shouldThrowOnReceive { throw TransportError() }
+        if receiveQueue.isEmpty { return Data() }
+        return receiveQueue.removeFirst()
+    }
+}
+
+@Suite("Transport Error Handling")
+struct TransportErrorHandlingTests {
+
+    // MARK: - Helpers
+
+    private func makeHP(transport: MDRTransport) -> MDRHeadphones {
+        MDRHeadphones(transport: transport)
+    }
+
+    private func makeProtocolInfoPacket(seq: UInt8 = 0) -> Data {
+        let response = ConnectRetProtocolInfo(
+            protocolVersion: Int32BE(2),
+            supportTable1Value: .ENABLE,
+            supportTable2Value: .ENABLE
+        )
+        var writer = DataWriter()
+        response.serialize(to: &writer)
+        return mdrPackCommand(type: .dataMdr, seq: seq, payload: writer.data)
+    }
+
+    // MARK: - Tests
+
+    @Test func pollEventsReturnsErrorWhenReceiveThrows() {
+        let transport = ThrowingMockTransport()
+        let hp = makeHP(transport: transport)
+
+        transport.shouldThrowOnReceive = true
+        let event = hp.pollEvents()
+
+        #expect(event == MDREvent.error.rawValue)
+    }
+
+    @Test func pollEventsReturnsErrorWhenSendThrows() {
+        let transport = ThrowingMockTransport()
+        let hp = makeHP(transport: transport)
+
+        // Queue a command so sendBuf has data to send
+        hp.sendCommand(ConnectGetProtocolInfo())
+
+        // Now make send throw before pollEvents tries to flush sendBuf
+        transport.shouldThrowOnSend = true
+        let event = hp.pollEvents()
+
+        #expect(event == MDREvent.error.rawValue)
+    }
+
+    @Test func badChecksumPacketDiscarded() {
+        let mock = MockTransport()
+        let hp = makeHP(transport: mock)
+
+        // Build a valid packet, then corrupt the checksum
+        var validPacket = makeProtocolInfoPacket()
+        // The checksum is the last byte before kEndMarker in the escaped content.
+        // Corrupt a byte inside the packet (between START and END) to break checksum.
+        // The escaped content starts at index 1, ends at index count-2.
+        // Flip a bit in the middle of the packet.
+        let corruptIdx = validPacket.count / 2
+        validPacket[corruptIdx] ^= 0xFF
+
+        mock.receiveQueue.append(validPacket)
+        let event = hp.pollEvents()
+
+        // Bad checksum should be discarded; not a crash, returns idle
+        #expect(event == MDREvent.idle.rawValue)
+
+        // The hp should still work: inject a valid packet and process it
+        mock.receiveQueue.append(makeProtocolInfoPacket())
+        let event2 = hp.pollEvents()
+        #expect(event2 == MDREvent.ok.rawValue)
+        #expect(hp.protocolInfo.version == 2)
+    }
+
+    @Test func incompletePacketStaysInBuffer() {
+        let mock = MockTransport()
+        let hp = makeHP(transport: mock)
+
+        // Build a valid packet, then split it into two parts
+        let fullPacket = makeProtocolInfoPacket()
+        let splitPoint = fullPacket.count / 2
+        let firstHalf = Data(fullPacket[..<splitPoint])
+        let secondHalf = Data(fullPacket[splitPoint...])
+
+        // Inject first half (has START but no END)
+        mock.receiveQueue.append(firstHalf)
+        let event1 = hp.pollEvents()
+        #expect(event1 == MDREvent.idle.rawValue)
+
+        // Inject second half (has END)
+        mock.receiveQueue.append(secondHalf)
+        let event2 = hp.pollEvents()
+        #expect(event2 == MDREvent.ok.rawValue)
+        #expect(hp.protocolInfo.version == 2)
+    }
+
+    @Test func multipleConcatenatedPackets() {
+        let mock = MockTransport()
+        let hp = makeHP(transport: mock)
+
+        // Build two different valid packets
+        let packet1 = makeProtocolInfoPacket(seq: 0)
+
+        let deviceInfoResponse = ConnectRetDeviceInfoModelName(
+            value: PrefixedString("WH-1000XM5")
+        )
+        var writer2 = DataWriter()
+        deviceInfoResponse.serialize(to: &writer2)
+        let packet2 = mdrPackCommand(type: .dataMdr, seq: 1, payload: writer2.data)
+
+        // Concatenate both packets into a single receiveQueue entry
+        var combined = Data()
+        combined.append(packet1)
+        combined.append(packet2)
+        mock.receiveQueue.append(combined)
+
+        // First pollEvents should process the first packet
+        let event1 = hp.pollEvents()
+        #expect(event1 == MDREvent.ok.rawValue)
+        #expect(hp.protocolInfo.version == 2)
+
+        // Second pollEvents should process the second packet
+        let event2 = hp.pollEvents()
+        #expect(event2 == MDREvent.deviceInfo.rawValue)
+        #expect(hp.modelName == "WH-1000XM5")
+    }
+}

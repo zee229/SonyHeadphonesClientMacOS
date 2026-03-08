@@ -1373,7 +1373,7 @@ struct RequestCommitTests {
     }
 
     @Test func commitHeadGesture() {
-        let (hp, mock) = makeHPWithSupport([.UPSCALING_AUTO_OFF])
+        let (hp, mock) = makeHPWithSupport([.HEAD_GESTURE_ON_OFF_TRAINING])
         hp.headGestureEnabled.desired = true
         hp.requestCommitV2()
         let _ = hp.pollEvents()
@@ -1382,6 +1382,22 @@ struct RequestCommitTests {
         let hasSystemCmd = cmds.contains { $0.data.first == T1Command.SYSTEM_SET_PARAM.rawValue }
         #expect(hasSystemCmd == true)
         #expect(hp.headGestureEnabled.isDirty == false)
+    }
+
+    @Test func commitHeadGestureNotSentWithUpscalingSupport() {
+        let (hp, mock) = makeHPWithSupport([.UPSCALING_AUTO_OFF])
+        hp.headGestureEnabled.desired = true
+        hp.requestCommitV2()
+        drainQueue(hp, mock)
+        let _ = hp.pollEvents()
+
+        let cmds = decodeSentCommands(mock)
+        let hasHeadGestureCmd = cmds.contains {
+            $0.data.first == T1Command.SYSTEM_SET_PARAM.rawValue &&
+            $0.data.count >= 2 && $0.data[1] == SystemInquiredType.HEAD_GESTURE_ON_OFF.rawValue
+        }
+        #expect(hasHeadGestureCmd == false)
+        #expect(hp.headGestureEnabled.isDirty == true)
     }
 
     @Test func commitAutoPowerOff() {

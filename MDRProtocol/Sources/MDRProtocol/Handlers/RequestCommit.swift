@@ -225,7 +225,7 @@ extension MDRHeadphones {
         }
 
         // Head Gesture
-        if support.contains(.UPSCALING_AUTO_OFF) {
+        if support.contains(.HEAD_GESTURE_ON_OFF_TRAINING) {
             if headGestureEnabled.isDirty {
                 queueCommand(SystemParamCommon(
                     base: SystemBase(command: .SYSTEM_SET_PARAM, type: .HEAD_GESTURE_ON_OFF),

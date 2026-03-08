@@ -392,4 +392,223 @@ struct IntegrationTests {
         }
         #expect(hasBatteryThreshold == true)
     }
+
+    // MARK: - RequestSync Fallback Path Tests
+
+    @Test func syncQueriesLRBatteryThreshold() {
+        let (hp, mock) = makeHPWithSupport([.LR_BATTERY_LEVEL_WITH_THRESHOLD])
+        hp.requestSyncV2()
+        drainQueue(hp, mock)
+        let _ = hp.pollEvents()
+
+        let cmds = decodeSentCommands(mock)
+        let hasLRThreshold = cmds.contains {
+            $0.data.first == T1Command.POWER_GET_STATUS.rawValue &&
+            $0.data.count >= 2 && $0.data[1] == PowerInquiredType.LR_BATTERY_WITH_THRESHOLD.rawValue
+        }
+        #expect(hasLRThreshold == true)
+    }
+
+    @Test func syncQueriesCradleBatteryThreshold() {
+        let (hp, mock) = makeHPWithSupport([.CRADLE_BATTERY_LEVEL_WITH_THRESHOLD])
+        hp.requestSyncV2()
+        drainQueue(hp, mock)
+        let _ = hp.pollEvents()
+
+        let cmds = decodeSentCommands(mock)
+        let hasCradleThreshold = cmds.contains {
+            $0.data.first == T1Command.POWER_GET_STATUS.rawValue &&
+            $0.data.count >= 2 && $0.data[1] == PowerInquiredType.CRADLE_BATTERY_WITH_THRESHOLD.rawValue
+        }
+        #expect(hasCradleThreshold == true)
+    }
+
+    @Test func syncSafeListeningTWS1() {
+        let (hp, mock) = makeHPWithT2Support([.SAFE_LISTENING_TWS_1])
+        hp.requestSyncV2()
+        drainQueue(hp, mock)
+        let _ = hp.pollEvents()
+
+        let cmds = decodeSentCommands(mock)
+        let hasSL = cmds.contains { $0.type == .dataMdrNo2 }
+        #expect(hasSL == true)
+    }
+
+    @Test func syncSafeListeningTWS2() {
+        let (hp, mock) = makeHPWithT2Support([.SAFE_LISTENING_TWS_2])
+        hp.requestSyncV2()
+        drainQueue(hp, mock)
+        let _ = hp.pollEvents()
+
+        let cmds = decodeSentCommands(mock)
+        let hasSL = cmds.contains { $0.type == .dataMdrNo2 }
+        #expect(hasSL == true)
+    }
+
+    @Test func syncNoBatterySupport() {
+        let (hp, mock) = makeHP()
+        hp.requestSyncV2()
+        drainQueue(hp, mock)
+        let syncEvent = hp.pollEvents()
+
+        let cmds = decodeSentCommands(mock)
+        let hasPowerGet = cmds.contains {
+            $0.data.first == T1Command.POWER_GET_STATUS.rawValue
+        }
+        #expect(hasPowerGet == false)
+        #expect(syncEvent == MDREvent.taskSyncOK.rawValue)
+    }
+
+    // MARK: - RequestInit Phase2 Integration Tests
+
+    @Test func initPhase2WithFullSupport() {
+        let (hp, mock) = makeHP()
+
+        // Phase 1: Init
+        hp.requestInitV2()
+        drainQueue(hp, mock)
+
+        // Inject protocol info (T1 + T2)
+        injectResponse(mock, ConnectRetProtocolInfo(
+            protocolVersion: Int32BE(2),
+            supportTable1Value: .ENABLE,
+            supportTable2Value: .ENABLE
+        ))
+        let _ = hp.pollEvents()
+        drainQueue(hp, mock)
+
+        // Inject T1 support functions
+        injectResponse(mock, ConnectRetSupportFunction(supportFunctions: [
+            SupportFunctionEntry(rawFunction: MessageMdrV2FunctionType_Table1.GENERAL_SETTING_1.rawValue, priority: 1),
+            SupportFunctionEntry(rawFunction: MessageMdrV2FunctionType_Table1.CODEC_INDICATOR.rawValue, priority: 2),
+            SupportFunctionEntry(rawFunction: MessageMdrV2FunctionType_Table1.UPSCALING_AUTO_OFF.rawValue, priority: 3),
+            SupportFunctionEntry(rawFunction: MessageMdrV2FunctionType_Table1.FIXED_MESSAGE.rawValue, priority: 4),
+            SupportFunctionEntry(rawFunction: MessageMdrV2FunctionType_Table1.HEAD_GESTURE_ON_OFF_TRAINING.rawValue, priority: 5),
+        ]))
+        let _ = hp.pollEvents()
+        drainQueue(hp, mock)
+
+        // Inject T2 support functions
+        injectResponse(mock, T2ConnectRetSupportFunction(supportFunctions: [
+            SupportFunctionEntry(rawFunction: MessageMdrV2FunctionType_Table2.SAFE_LISTENING_HBS_1.rawValue, priority: 1),
+        ]), type: .dataMdrNo2)
+        let _ = hp.pollEvents()
+        drainQueue(hp, mock)
+
+        let initEvent = hp.pollEvents()
+        #expect(initEvent == MDREvent.taskInitOK.rawValue)
+
+        // Verify commands sent in Phase2
+        let cmds = decodeSentCommands(mock)
+
+        let hasGSCapability = cmds.contains {
+            $0.data.first == T1Command.GENERAL_SETTING_GET_CAPABILITY.rawValue
+        }
+        #expect(hasGSCapability == true)
+
+        let hasCodec = cmds.contains {
+            $0.data.first == T1Command.COMMON_GET_STATUS.rawValue
+        }
+        #expect(hasCodec == true)
+
+        let hasUpscaling = cmds.contains {
+            $0.data.first == T1Command.AUDIO_GET_CAPABILITY.rawValue
+        }
+        #expect(hasUpscaling == true)
+
+        let hasAlert = cmds.contains {
+            $0.data.first == T1Command.ALERT_SET_STATUS.rawValue
+        }
+        #expect(hasAlert == true)
+
+        let hasHeadGesture = cmds.contains {
+            $0.data.first == T1Command.SYSTEM_GET_PARAM.rawValue &&
+            $0.data.count >= 2 && $0.data[1] == SystemInquiredType.HEAD_GESTURE_ON_OFF.rawValue
+        }
+        #expect(hasHeadGesture == true)
+    }
+
+    @Test func initPhase2MinimalSupport() {
+        let (hp, mock) = makeHP()
+
+        hp.requestInitV2()
+        drainQueue(hp, mock)
+
+        // Protocol info (T1 only)
+        injectResponse(mock, ConnectRetProtocolInfo(
+            protocolVersion: Int32BE(2),
+            supportTable1Value: .ENABLE,
+            supportTable2Value: .DISABLE
+        ))
+        let _ = hp.pollEvents()
+        drainQueue(hp, mock)
+
+        // Empty support function list
+        injectResponse(mock, ConnectRetSupportFunction(supportFunctions: []))
+        let _ = hp.pollEvents()
+        drainQueue(hp, mock)
+
+        let initEvent = hp.pollEvents()
+        #expect(initEvent == MDREvent.taskInitOK.rawValue)
+
+        let cmds = decodeSentCommands(mock)
+
+        // Should NOT have conditional commands
+        let hasGS = cmds.contains {
+            $0.data.first == T1Command.GENERAL_SETTING_GET_CAPABILITY.rawValue
+        }
+        #expect(hasGS == false)
+
+        let hasAudioCap = cmds.contains {
+            $0.data.first == T1Command.AUDIO_GET_CAPABILITY.rawValue
+        }
+        #expect(hasAudioCap == false)
+
+        // SHOULD have unconditional commands
+        let hasPlay = cmds.contains {
+            $0.data.first == T1Command.PLAY_GET_PARAM.rawValue
+        }
+        #expect(hasPlay == true)
+
+        let hasEq = cmds.contains {
+            $0.data.first == T1Command.EQEBB_GET_STATUS.rawValue
+        }
+        #expect(hasEq == true)
+
+        let hasLog = cmds.contains {
+            $0.data.first == T1Command.LOG_SET_STATUS.rawValue
+        }
+        #expect(hasLog == true)
+    }
+
+    @Test func initPhase2NoTable2() {
+        let (hp, mock) = makeHP()
+
+        hp.requestInitV2()
+        drainQueue(hp, mock)
+
+        // Protocol info (T1 only, no T2)
+        injectResponse(mock, ConnectRetProtocolInfo(
+            protocolVersion: Int32BE(2),
+            supportTable1Value: .ENABLE,
+            supportTable2Value: .DISABLE
+        ))
+        let _ = hp.pollEvents()
+        drainQueue(hp, mock)
+
+        // T1 support functions
+        injectResponse(mock, ConnectRetSupportFunction(supportFunctions: [
+            SupportFunctionEntry(rawFunction: MessageMdrV2FunctionType_Table1.BATTERY_LEVEL_INDICATOR.rawValue, priority: 1),
+        ]))
+        let _ = hp.pollEvents()
+        drainQueue(hp, mock)
+
+        let initEvent = hp.pollEvents()
+        #expect(initEvent == MDREvent.taskInitOK.rawValue)
+
+        // Should NOT have any dataMdrNo2 commands
+        let cmds = decodeSentCommands(mock)
+        let hasT2 = cmds.contains { $0.type == .dataMdrNo2 }
+        #expect(hasT2 == false)
+    }
 }

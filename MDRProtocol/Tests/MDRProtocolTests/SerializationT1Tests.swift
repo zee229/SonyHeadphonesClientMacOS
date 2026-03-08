@@ -749,3 +749,606 @@ struct T1GeneralSettingSerializationTests {
         #expect(restored.settingInfo.subject.value == "NC")
     }
 }
+
+// MARK: - Additional System Tests
+
+@Suite("T1 Additional System Serialization")
+struct T1AdditionalSystemSerializationTests {
+    @Test func systemParamSmartTalkingRoundtrip() throws {
+        let original = SystemParamSmartTalking(
+            base: SystemBase(command: .SYSTEM_SET_PARAM, type: .SMART_TALKING_MODE_TYPE1),
+            onOffValue: .DISABLE,
+            previewModeOnOffValue: .ENABLE
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.onOffValue == .DISABLE)
+        #expect(restored.previewModeOnOffValue == .ENABLE)
+        // base(2) + onOff(1) + previewOnOff(1) = 4
+        #expect(serialize(original).count == 4)
+    }
+
+    @Test func systemParamVoiceAssistantSettingsRoundtrip() throws {
+        let original = SystemParamVoiceAssistantSettings(
+            base: SystemBase(command: .SYSTEM_RET_PARAM, type: .VOICE_ASSISTANT_SETTINGS),
+            voiceAssistant: .GOOGLE_ASSISTANT
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.voiceAssistant == .GOOGLE_ASSISTANT)
+        // base(2) + voiceAssistant(1) = 3
+        #expect(serialize(original).count == 3)
+    }
+
+    @Test func systemParamWearingStatusDetectorRoundtrip() throws {
+        let original = SystemParamWearingStatusDetector(
+            base: SystemBase(command: .SYSTEM_RET_PARAM, type: .WEARING_STATUS_DETECTOR),
+            operationStatus: .DETECTION_STARTED,
+            errorCode: .LEFT_CONNECTION_ERROR,
+            numOfSelectedEarpieces: 3,
+            indexOfCurrentDetection: 1,
+            currentDetectingSeries: .HYBRID,
+            earpieceSize: .M
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.operationStatus == .DETECTION_STARTED)
+        #expect(restored.errorCode == .LEFT_CONNECTION_ERROR)
+        #expect(restored.numOfSelectedEarpieces == 3)
+        #expect(restored.indexOfCurrentDetection == 1)
+        #expect(restored.currentDetectingSeries == .HYBRID)
+        #expect(restored.earpieceSize == .M)
+        // base(2) + 6 fields = 8
+        #expect(serialize(original).count == 8)
+    }
+
+    @Test func systemParamEarpieceSelectionRoundtrip() throws {
+        let original = SystemParamEarpieceSelection(
+            base: SystemBase(command: .SYSTEM_RET_PARAM, type: .EARPIECE_SELECTION),
+            series: .POLYURETHANE
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.series == .POLYURETHANE)
+        // base(2) + series(1) = 3
+        #expect(serialize(original).count == 3)
+    }
+
+    @Test func systemParamCallSettingsRoundtrip() throws {
+        let original = SystemParamCallSettings(
+            base: SystemBase(command: .SYSTEM_RET_PARAM, type: .CALL_SETTINGS),
+            selfVoiceOnOff: .DISABLE,
+            selfVoiceVolume: 5,
+            callVoiceVolume: 10
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.selfVoiceOnOff == .DISABLE)
+        #expect(restored.selfVoiceVolume == 5)
+        #expect(restored.callVoiceVolume == 10)
+        // base(2) + selfVoiceOnOff(1) + selfVoiceVolume(1) + callVoiceVolume(1) = 5
+        #expect(serialize(original).count == 5)
+    }
+
+    @Test func systemParamAssignableSettingsWithLimitRoundtrip() throws {
+        let original = SystemParamAssignableSettingsWithLimit(
+            base: SystemBase(command: .SYSTEM_RET_PARAM, type: .ASSIGNABLE_SETTINGS_WITH_LIMITATION),
+            presets: PodArray<UInt8>([
+                Preset.AMBIENT_SOUND_CONTROL.rawValue,
+                Preset.PLAYBACK_CONTROL.rawValue,
+                Preset.VOLUME_CONTROL.rawValue,
+            ])
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.presets.value.count == 3)
+    }
+
+    @Test func systemParamHeadGestureTrainingRoundtrip() throws {
+        let original = SystemParamHeadGestureTraining(
+            base: SystemBase(command: .SYSTEM_RET_PARAM, type: .HEAD_GESTURE_TRAINING),
+            headGestureAction: .SWING
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.headGestureAction == .SWING)
+        // base(2) + action(1) = 3
+        #expect(serialize(original).count == 3)
+    }
+
+    @Test func systemSetParamWearingStatusDetectorRoundtrip() throws {
+        let original = SystemSetParamWearingStatusDetector(
+            base: SystemBase(command: .SYSTEM_SET_PARAM, type: .WEARING_STATUS_DETECTOR),
+            operation: .DETECTION_CANCEL,
+            indexOfCurrentDetection: 2,
+            currentDetectionSeries: .SOFT_FITTING_FOR_LINKBUDS_FIT,
+            currentDetectionSize: .L
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.operation == .DETECTION_CANCEL)
+        #expect(restored.indexOfCurrentDetection == 2)
+        #expect(restored.currentDetectionSeries == .SOFT_FITTING_FOR_LINKBUDS_FIT)
+        #expect(restored.currentDetectionSize == .L)
+        // base(2) + operation(1) + index(1) + series(1) + size(1) = 6
+        #expect(serialize(original).count == 6)
+    }
+
+    @Test func systemSetParamResetSettingsRoundtrip() throws {
+        let original = SystemSetParamResetSettings(
+            base: SystemBase(command: .SYSTEM_SET_PARAM, type: .RESET_SETTINGS),
+            resetType: .FACTORY_RESET
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.resetType == .FACTORY_RESET)
+        // base(2) + resetType(1) = 3
+        #expect(serialize(original).count == 3)
+    }
+
+    @Test func systemNotifyParamResetSettingsRoundtrip() throws {
+        let original = SystemNotifyParamResetSettings(
+            base: SystemBase(command: .SYSTEM_NTFY_PARAM, type: .RESET_SETTINGS),
+            resetResult: .ERROR_CONNECTION_LEFT
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.resetResult == .ERROR_CONNECTION_LEFT)
+        // base(2) + resetResult(1) = 3
+        #expect(serialize(original).count == 3)
+    }
+
+    @Test func systemNotifyParamFaceTapTestModeRoundtrip() throws {
+        let original = SystemNotifyParamFaceTapTestMode(
+            base: SystemBase(command: .SYSTEM_NTFY_PARAM, type: .FACE_TAP_TEST_MODE),
+            key: .RIGHT_SIDE_KEY,
+            action: .TRIPLE_TAP
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.key == .RIGHT_SIDE_KEY)
+        #expect(restored.action == .TRIPLE_TAP)
+        // base(2) + key(1) + action(1) = 4
+        #expect(serialize(original).count == 4)
+    }
+
+    @Test func systemExtParamSmartTalkingMode1Roundtrip() throws {
+        let original = SystemExtParamSmartTalkingMode1(
+            base: SystemExtBase(command: .SYSTEM_RET_EXT_PARAM, type: .SMART_TALKING_MODE_TYPE1),
+            detectSensitivity: .HIGH,
+            voiceFocus: .DISABLE,
+            modeOffTime: .SLOW
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.detectSensitivity == .HIGH)
+        #expect(restored.voiceFocus == .DISABLE)
+        #expect(restored.modeOffTime == .SLOW)
+        // base(2) + sensitivity(1) + voiceFocus(1) + modeOffTime(1) = 5
+        #expect(serialize(original).count == 5)
+    }
+
+    @Test func systemExtParamSmartTalkingMode2Roundtrip() throws {
+        let original = SystemExtParamSmartTalkingMode2(
+            base: SystemExtBase(command: .SYSTEM_SET_EXT_PARAM, type: .SMART_TALKING_MODE_TYPE2),
+            detectSensitivity: .LOW,
+            modeOffTime: .NONE
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.detectSensitivity == .LOW)
+        #expect(restored.modeOffTime == .NONE)
+        // base(2) + sensitivity(1) + modeOffTime(1) = 4
+        #expect(serialize(original).count == 4)
+    }
+
+    @Test func systemExtParamAssignableSettingsRoundtrip() throws {
+        let preset1 = AssignableSettingsPreset(
+            preset: .AMBIENT_SOUND_CONTROL,
+            actions: MDRArray([
+                AssignableSettingsAction(action: .SINGLE_TAP, function: .NO_FUNCTION),
+                AssignableSettingsAction(action: .DOUBLE_TAP, function: .NO_FUNCTION),
+            ])
+        )
+        let preset2 = AssignableSettingsPreset(
+            preset: .VOLUME_CONTROL,
+            actions: MDRArray([
+                AssignableSettingsAction(action: .TRIPLE_TAP, function: .NO_FUNCTION),
+            ])
+        )
+        let original = SystemExtParamAssignableSettings(
+            base: SystemExtBase(command: .SYSTEM_RET_EXT_PARAM, type: .ASSIGNABLE_SETTINGS),
+            presets: MDRArray([preset1, preset2])
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.presets.value.count == 2)
+        #expect(restored.presets.value[0].preset == .AMBIENT_SOUND_CONTROL)
+        #expect(restored.presets.value[0].actions.value.count == 2)
+        #expect(restored.presets.value[1].preset == .VOLUME_CONTROL)
+    }
+
+    @Test func systemExtParamWearingStatusDetectorRoundtrip() throws {
+        let original = SystemExtParamWearingStatusDetector(
+            base: SystemExtBase(command: .SYSTEM_RET_EXT_PARAM, type: .WEARING_STATUS_DETECTOR),
+            fittingResultLeft: .POOR,
+            fittingResultRight: .GOOD,
+            bestEarpieceSeriesLeft: .HYBRID,
+            bestEarpieceSeriesRight: .POLYURETHANE,
+            bestEarpieceSizeLeft: .S,
+            bestEarpieceSizeRight: .L
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.fittingResultLeft == .POOR)
+        #expect(restored.fittingResultRight == .GOOD)
+        #expect(restored.bestEarpieceSeriesLeft == .HYBRID)
+        #expect(restored.bestEarpieceSeriesRight == .POLYURETHANE)
+        #expect(restored.bestEarpieceSizeLeft == .S)
+        #expect(restored.bestEarpieceSizeRight == .L)
+        // base(2) + 6 fields = 8
+        #expect(serialize(original).count == 8)
+    }
+
+    @Test func systemSetExtParamCallSettingsRoundtrip() throws {
+        let original = SystemSetExtParamCallSettings(
+            base: SystemExtBase(command: .SYSTEM_SET_EXT_PARAM, type: .CALL_SETTINGS),
+            testSoundControl: .START
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.testSoundControl == .START)
+        // base(2) + testSoundControl(1) = 3
+        #expect(serialize(original).count == 3)
+    }
+
+    @Test func systemNotifyExtParamCallSettingsRoundtrip() throws {
+        let original = SystemNotifyExtParamCallSettings(
+            base: SystemExtBase(command: .SYSTEM_NTFY_EXT_PARAM, type: .CALL_SETTINGS),
+            testSoundControlAck: .ACK
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.testSoundControlAck == .ACK)
+        // base(2) + ack(1) = 3
+        #expect(serialize(original).count == 3)
+    }
+
+    @Test func systemExtParamAssignableSettingsWithLimitRoundtrip() throws {
+        let preset = AssignableSettingsPreset(
+            preset: .PLAYBACK_CONTROL,
+            actions: MDRArray([
+                AssignableSettingsAction(action: .DOUBLE_TAP, function: .NO_FUNCTION),
+            ])
+        )
+        let original = SystemExtParamAssignableSettingsWithLimit(
+            base: SystemExtBase(command: .SYSTEM_RET_EXT_PARAM, type: .ASSIGNABLE_SETTINGS_WITH_LIMITATION),
+            presets: MDRArray([preset])
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.presets.value.count == 1)
+        #expect(restored.presets.value[0].preset == .PLAYBACK_CONTROL)
+    }
+}
+
+// MARK: - Additional Audio Tests
+
+@Suite("T1 Additional Audio Serialization")
+struct T1AdditionalAudioSerializationTests {
+    @Test func audioParamUpscalingRoundtrip() throws {
+        let original = AudioParamUpscaling(settingValue: .AUTO)
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.settingValue == .AUTO)
+        // command(1) + type(1) + settingValue(1) = 3
+        #expect(serialize(original).count == 3)
+    }
+
+    @Test func audioStatusCommonRoundtrip() throws {
+        let original = AudioStatusCommon(
+            type: .UPSCALING,
+            status: .ENABLE
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.status == .ENABLE)
+        // command(1) + type(1) + status(1) = 3
+        #expect(serialize(original).count == 3)
+    }
+
+    @Test func audioParamConnectionWithLdacStatusRoundtrip() throws {
+        let original = AudioParamConnectionWithLdacStatus(
+            settingValue: .CONNECTION_QUALITY_PRIOR
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.settingValue == .CONNECTION_QUALITY_PRIOR)
+        // command(1) + type(1) + settingValue(1) = 3
+        #expect(serialize(original).count == 3)
+    }
+
+    @Test func audioRetParamConnectionModeClassicAudioLeAudioRoundtrip() throws {
+        let original = AudioRetParamConnectionModeClassicAudioLeAudio(
+            settingValue: .CONNECTION_QUALITY_PRIOR
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.settingValue == .CONNECTION_QUALITY_PRIOR)
+        // command(1) + type(1) + settingValue(1) = 3
+        #expect(serialize(original).count == 3)
+    }
+
+    @Test func audioParamVoiceContentsRoundtrip() throws {
+        let original = AudioParamVoiceContents(onOffSettingValue: .ENABLE)
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.onOffSettingValue == .ENABLE)
+        // command(1) + type(1) + onOff(1) = 3
+        #expect(serialize(original).count == 3)
+    }
+
+    @Test func audioParamSoundLeakageReductionRoundtrip() throws {
+        let original = AudioParamSoundLeakageReduction(onOffSettingValue: .ENABLE)
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.onOffSettingValue == .ENABLE)
+        // command(1) + type(1) + onOff(1) = 3
+        #expect(serialize(original).count == 3)
+    }
+
+    @Test func audioParamListeningOptionAssignCustomizableItemRoundtrip() throws {
+        let original = AudioParamListeningOptionAssignCustomizableItem(
+            items: PodArray<UInt8>([0x01, 0x02, 0x03, 0x04])
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.items.value == [0x01, 0x02, 0x03, 0x04])
+        // command(1) + type(1) + count(1) + items(4) = 7
+        #expect(serialize(original).count == 7)
+    }
+
+    @Test func audioParamUpmixSeriesRoundtrip() throws {
+        let original = AudioParamUpmixSeries(upmixItemId: .GAME)
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.upmixItemId == .GAME)
+        // command(1) + type(1) + upmixItemId(1) = 3
+        #expect(serialize(original).count == 3)
+    }
+
+    @Test func audioNtfyParamConnectionModeClassicAudioLeAudioRoundtrip() throws {
+        let original = AudioNtfyParamConnectionModeClassicAudioLeAudio(
+            settingValue: .CONNECTION_QUALITY_PRIOR,
+            switchingStream: .LE_AUDIO
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.settingValue == .CONNECTION_QUALITY_PRIOR)
+        #expect(restored.switchingStream == .LE_AUDIO)
+        // command(1) + type(1) + settingValue(1) + switchingStream(1) = 4
+        #expect(serialize(original).count == 4)
+    }
+
+    @Test func audioRetCapabilityUpscalingRoundtrip() throws {
+        let original = AudioRetCapabilityUpscaling(upscalingType: .DSEE_ULTIMATE)
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.upscalingType == .DSEE_ULTIMATE)
+        // command(1) + type(1) + upscalingType(1) = 3
+        #expect(serialize(original).count == 3)
+    }
+}
+
+// MARK: - Additional Alert Tests
+
+@Suite("T1 Additional Alert Serialization")
+struct T1AdditionalAlertSerializationTests {
+    @Test func alertRetStatusVoiceAssistantRoundtrip() throws {
+        let original = AlertRetStatusVoiceAssistant(
+            voiceAssistants: PodArray<UInt8>([0x30, 0x31, 0x32])
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.voiceAssistants.value.count == 3)
+        // command(1) + type(1) + count(1) + assistants(3) = 6
+        #expect(serialize(original).count == 6)
+    }
+
+    @Test func alertSetStatusAppBecomesForegroundRoundtrip() throws {
+        let original = AlertSetStatusAppBecomesForeground(status: .ENABLE)
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.status == .ENABLE)
+        // command(1) + type(1) + status(1) = 3
+        #expect(serialize(original).count == 3)
+    }
+
+    @Test func alertSetStatusLEAudioAlertNotificationRoundtrip() throws {
+        let original = AlertSetStatusLEAudioAlertNotification(
+            leAudioAlertStatus: .ENABLE,
+            confirmationType: .CONFIRMED_DONT_SHOW_AGAIN
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.leAudioAlertStatus == .ENABLE)
+        #expect(restored.confirmationType == .CONFIRMED_DONT_SHOW_AGAIN)
+        // command(1) + type(1) + status(1) + confirmation(1) = 4
+        #expect(serialize(original).count == 4)
+    }
+
+    @Test func alertSetParamVibratorRoundtrip() throws {
+        let original = AlertSetParamVibrator(vibrationType: .NO_PATTERN_SPECIFIED)
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.vibrationType == .NO_PATTERN_SPECIFIED)
+        // command(1) + type(1) + vibrationType(1) = 3
+        #expect(serialize(original).count == 3)
+    }
+
+    @Test func alertSetParamFixedMessageWithLeftRightSelectionRoundtrip() throws {
+        let original = AlertSetParamFixedMessageWithLeftRightSelection(
+            messageType: .CAUTION_FOR_CHANGE_VOICE_ASSISTANT_ASSIGNABLE_SENSOR,
+            actionType: .RIGHT
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.messageType == .CAUTION_FOR_CHANGE_VOICE_ASSISTANT_ASSIGNABLE_SENSOR)
+        #expect(restored.actionType == .RIGHT)
+        // command(1) + type(1) + messageType(1) + actionType(1) = 4
+        #expect(serialize(original).count == 4)
+    }
+
+    @Test func alertSetParamAppBecomesForegroundRoundtrip() throws {
+        let original = AlertSetParamAppBecomesForeground(
+            messageType: .DISCONNECT_CAUSED_BY_CONNECTION_MODE_CHANGE,
+            actionType: .POSITIVE
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.messageType == .DISCONNECT_CAUSED_BY_CONNECTION_MODE_CHANGE)
+        #expect(restored.actionType == .POSITIVE)
+        // command(1) + type(1) + messageType(1) + actionType(1) = 4
+        #expect(serialize(original).count == 4)
+    }
+
+    @Test func alertSetParamFlexibleMessageRoundtrip() throws {
+        let original = AlertSetParamFlexibleMessage(
+            messageType: .CAUTION_FOR_FEATURES_EXCLUSIVE_TO_MULTI_POINT,
+            actionType: .POSITIVE
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.messageType == .CAUTION_FOR_FEATURES_EXCLUSIVE_TO_MULTI_POINT)
+        #expect(restored.actionType == .POSITIVE)
+        // command(1) + type(1) + messageType(1) + actionType(1) = 4
+        #expect(serialize(original).count == 4)
+    }
+
+    @Test func alertNotifyParamFixedMessageRoundtrip() throws {
+        let original = AlertNotifyParamFixedMessage(
+            messageType: .DISCONNECT_CAUSED_BY_CONNECTION_MODE_CHANGE,
+            actionType: .POSITIVE_NEGATIVE
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.messageType == .DISCONNECT_CAUSED_BY_CONNECTION_MODE_CHANGE)
+        #expect(restored.actionType == .POSITIVE_NEGATIVE)
+        // command(1) + type(1) + messageType(1) + actionType(1) = 4
+        #expect(serialize(original).count == 4)
+    }
+
+    @Test func alertNotifyParamFixedMessageWithLeftRightSelectionRoundtrip() throws {
+        let original = AlertNotifyParamFixedMessageWithLeftRightSelection(
+            messageType: .CAUTION_FOR_CHANGE_VOICE_ASSISTANT_ASSIGNABLE_BUTTON,
+            defaultSelectedValue: .RIGHT
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.messageType == .CAUTION_FOR_CHANGE_VOICE_ASSISTANT_ASSIGNABLE_BUTTON)
+        #expect(restored.defaultSelectedValue == .RIGHT)
+        // command(1) + type(1) + messageType(1) + defaultSelected(1) = 4
+        #expect(serialize(original).count == 4)
+    }
+
+    @Test func alertNotifyParamAppBecomesForegroundRoundtrip() throws {
+        let original = AlertNotifyParamAppBecomesForeground(
+            messageType: .DISCONNECT_CAUSED_BY_CONNECTION_MODE_CHANGE,
+            actionType: .POSITIVE_CONFIRMATION_WITH_REPLY
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.messageType == .DISCONNECT_CAUSED_BY_CONNECTION_MODE_CHANGE)
+        #expect(restored.actionType == .POSITIVE_CONFIRMATION_WITH_REPLY)
+        // command(1) + type(1) + messageType(1) + actionType(1) = 4
+        #expect(serialize(original).count == 4)
+    }
+}
+
+// MARK: - Additional Power Tests
+
+@Suite("T1 Additional Power Serialization")
+struct T1AdditionalPowerSerializationTests {
+    @Test func powerRetStatusCradleBatteryThresholdRoundtrip() throws {
+        let original = PowerRetStatusCradleBatteryThreshold(
+            batteryStatus: PowerBatteryThresholdStatus(
+                batteryStatus: PowerBatteryStatus(batteryLevel: 75, chargingStatus: .CHARGING),
+                batteryThreshold: 30
+            )
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.batteryStatus.batteryStatus.batteryLevel == 75)
+        #expect(restored.batteryStatus.batteryStatus.chargingStatus == .CHARGING)
+        #expect(restored.batteryStatus.batteryThreshold == 30)
+        // command(1) + type(1) + batteryLevel(1) + chargingStatus(1) + threshold(1) = 5
+        #expect(serialize(original).count == 5)
+    }
+
+    @Test func powerParamAutoPowerOffWithWearingDetectionRoundtrip() throws {
+        let original = PowerParamAutoPowerOffWithWearingDetection(
+            currentPowerOffElements: .POWER_OFF_WHEN_REMOVED_FROM_EARS,
+            lastSelectPowerOffElements: .POWER_OFF_IN_60_MIN
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.currentPowerOffElements == .POWER_OFF_WHEN_REMOVED_FROM_EARS)
+        #expect(restored.lastSelectPowerOffElements == .POWER_OFF_IN_60_MIN)
+        // command(1) + type(1) + current(1) + last(1) = 4
+        #expect(serialize(original).count == 4)
+    }
+}
+
+// MARK: - Additional Play Tests
+
+@Suite("T1 Additional Play Serialization")
+struct T1AdditionalPlaySerializationTests {
+    @Test func playStatusPlaybackControlWithCallVolumeAdjustmentAndFunctionChangeRoundtrip() throws {
+        let original = PlayStatusPlaybackControlWithCallVolumeAdjustmentAndFunctionChange(
+            status: .ENABLE,
+            playbackStatus: .PLAY,
+            musicCallStatus: .CALL,
+            playbackControlStatus: .ENABLE
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.status == .ENABLE)
+        #expect(restored.playbackStatus == .PLAY)
+        #expect(restored.musicCallStatus == .CALL)
+        #expect(restored.playbackControlStatus == .ENABLE)
+        // command(1) + type(1) + status(1) + playback(1) + musicCall(1) + playbackControl(1) = 6
+        #expect(serialize(original).count == 6)
+    }
+
+    @Test func playStatusPlaybackControlWithFunctionChangeRoundtrip() throws {
+        let original = PlayStatusPlaybackControlWithFunctionChange(
+            status: .ENABLE,
+            playbackStatus: .PAUSE,
+            playbackControlStatus: .DISABLE
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.status == .ENABLE)
+        #expect(restored.playbackStatus == .PAUSE)
+        #expect(restored.playbackControlStatus == .DISABLE)
+        // command(1) + type(1) + status(1) + playback(1) + playbackControl(1) = 5
+        #expect(serialize(original).count == 5)
+    }
+}
+
+// MARK: - Additional Connect Tests
+
+@Suite("T1 Additional Connect Serialization")
+struct T1AdditionalConnectSerializationTests {
+    @Test func connectRetDeviceInfoBaseRoundtrip() throws {
+        let original = ConnectRetDeviceInfoBase(
+            command: .CONNECT_RET_DEVICE_INFO,
+            type: .FW_VERSION
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.type == .FW_VERSION)
+        // command(1) + type(1) = 2
+        #expect(serialize(original).count == 2)
+    }
+}
