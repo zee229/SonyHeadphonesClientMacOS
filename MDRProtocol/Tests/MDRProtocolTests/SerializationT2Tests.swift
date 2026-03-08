@@ -264,4 +264,210 @@ struct T2SafeListeningSerializationTests {
         let restored = try roundtrip(original)
         #expect(restored == original)
     }
+
+    // MARK: Sub-struct roundtrips
+
+    @Test func safeListeningData1Roundtrip() throws {
+        let inner = SafeListeningData(
+            targetType: .TWS_L,
+            timestamp: Int32BE(99999),
+            rtcRC: Int16BE(200),
+            viewTime: 45,
+            soundPressure: Int32BE(8000)
+        )
+        let original = SafeListeningData1(data: inner)
+        var writer = DataWriter()
+        original.write(to: &writer)
+        #expect(writer.data.count == 12)
+        var reader = DataReader(writer.data)
+        let restored = try SafeListeningData1.read(from: &reader)
+        #expect(restored == original)
+    }
+
+    @Test func safeListeningData2Roundtrip() throws {
+        let inner = SafeListeningData(
+            targetType: .TWS_R,
+            timestamp: Int32BE(55555),
+            rtcRC: Int16BE(300),
+            viewTime: 60,
+            soundPressure: Int32BE(3000)
+        )
+        let original = SafeListeningData2(data: inner, ambientTime: 42)
+        var writer = DataWriter()
+        original.write(to: &writer)
+        #expect(writer.data.count == 13)
+        var reader = DataReader(writer.data)
+        let restored = try SafeListeningData2.read(from: &reader)
+        #expect(restored == original)
+        #expect(restored.ambientTime == 42)
+    }
+
+    @Test func safeListeningStatusRoundtrip() throws {
+        let original = SafeListeningStatus(
+            timestamp: Int32BE(123456),
+            rtcRC: Int16BE(500)
+        )
+        var writer = DataWriter()
+        original.write(to: &writer)
+        #expect(writer.data.count == 6)
+        var reader = DataReader(writer.data)
+        let restored = try SafeListeningStatus.read(from: &reader)
+        #expect(restored == original)
+    }
+
+    // MARK: RetStatus roundtrips
+
+    @Test func retStatusHbs1Roundtrip() throws {
+        let data = SafeListeningData(targetType: .HBS, timestamp: Int32BE(1000), rtcRC: Int16BE(10), viewTime: 5, soundPressure: Int32BE(500))
+        let original = SafeListeningRetStatusHbs1(
+            logDataStatus: .SENDING,
+            currentData: SafeListeningData1(data: data)
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.logDataStatus == .SENDING)
+        // command(1) + type(1) + logDataStatus(1) + data(12) = 15
+        #expect(serialize(original).count == 15)
+    }
+
+    @Test func retStatusHbs2Roundtrip() throws {
+        let data = SafeListeningData(targetType: .HBS, timestamp: Int32BE(2000), rtcRC: Int16BE(20), viewTime: 10, soundPressure: Int32BE(1500))
+        let original = SafeListeningRetStatusHbs2(
+            logDataStatus: .COMPLETED,
+            currentData: SafeListeningData2(data: data, ambientTime: 7)
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        // command(1) + type(1) + logDataStatus(1) + data(13) = 16
+        #expect(serialize(original).count == 16)
+    }
+
+    @Test func retStatusTws1Roundtrip() throws {
+        let dataL = SafeListeningData(targetType: .TWS_L, timestamp: Int32BE(3000), rtcRC: Int16BE(30), viewTime: 15, soundPressure: Int32BE(2000))
+        let dataR = SafeListeningData(targetType: .TWS_R, timestamp: Int32BE(3001), rtcRC: Int16BE(31), viewTime: 16, soundPressure: Int32BE(2001))
+        let original = SafeListeningRetStatusTws1(
+            logDataStatusLeft: .SENDING,
+            logDataStatusRight: .NOT_SENDING,
+            currentDataLeft: SafeListeningData1(data: dataL),
+            currentDataRight: SafeListeningData1(data: dataR)
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        // command(1) + type(1) + statusL(1) + statusR(1) + dataL(12) + dataR(12) = 28
+        #expect(serialize(original).count == 28)
+    }
+
+    @Test func retStatusTws2Roundtrip() throws {
+        let dataL = SafeListeningData(targetType: .TWS_L, timestamp: Int32BE(4000), rtcRC: Int16BE(40), viewTime: 20, soundPressure: Int32BE(3000))
+        let dataR = SafeListeningData(targetType: .TWS_R, timestamp: Int32BE(4001), rtcRC: Int16BE(41), viewTime: 21, soundPressure: Int32BE(3001))
+        let original = SafeListeningRetStatusTws2(
+            logDataStatusLeft: .COMPLETED,
+            logDataStatusRight: .ERROR,
+            currentDataLeft: SafeListeningData2(data: dataL, ambientTime: 11),
+            currentDataRight: SafeListeningData2(data: dataR, ambientTime: 12)
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        // command(1) + type(1) + statusL(1) + statusR(1) + dataL(13) + dataR(13) = 30
+        #expect(serialize(original).count == 30)
+    }
+
+    // MARK: SetStatus roundtrips
+
+    @Test func setStatusHbsRoundtrip() throws {
+        let original = SafeListeningSetStatusHbs(
+            logDataStatus: .SENDING,
+            status: SafeListeningStatus(timestamp: Int32BE(77777), rtcRC: Int16BE(88))
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        // command(1) + type(1) + logDataStatus(1) + status(6) = 9
+        #expect(serialize(original).count == 9)
+    }
+
+    @Test func setStatusTwsRoundtrip() throws {
+        let original = SafeListeningSetStatusTws(
+            logDataStatusLeft: .SENDING,
+            logDataStatusRight: .COMPLETED,
+            statusLeft: SafeListeningStatus(timestamp: Int32BE(11111), rtcRC: Int16BE(22)),
+            statusRight: SafeListeningStatus(timestamp: Int32BE(33333), rtcRC: Int16BE(44))
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        // command(1) + type(1) + statusL(1) + statusR(1) + left(6) + right(6) = 16
+        #expect(serialize(original).count == 16)
+    }
+
+    // MARK: NotifyStatus roundtrips
+
+    @Test func notifyStatusHbs1Roundtrip() throws {
+        let d1 = SafeListeningData1(data: SafeListeningData(targetType: .HBS, timestamp: Int32BE(100), rtcRC: Int16BE(1), viewTime: 1, soundPressure: Int32BE(10)))
+        let d2 = SafeListeningData1(data: SafeListeningData(targetType: .HBS, timestamp: Int32BE(200), rtcRC: Int16BE(2), viewTime: 2, soundPressure: Int32BE(20)))
+        let original = SafeListeningNotifyStatusHbs1(logDataStatus: .SENDING, data: [d1, d2])
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.data.count == 2)
+        // command(1) + type(1) + logDataStatus(1) + count(1) + 2*12 = 28
+        #expect(serialize(original).count == 28)
+    }
+
+    @Test func notifyStatusHbs2Roundtrip() throws {
+        let d1 = SafeListeningData2(data: SafeListeningData(targetType: .HBS, timestamp: Int32BE(100), rtcRC: Int16BE(1), viewTime: 1, soundPressure: Int32BE(10)), ambientTime: 5)
+        let original = SafeListeningNotifyStatusHbs2(logDataStatus: .COMPLETED, data: [d1])
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.data.count == 1)
+        // command(1) + type(1) + logDataStatus(1) + count(1) + 1*13 = 17
+        #expect(serialize(original).count == 17)
+    }
+
+    @Test func notifyStatusTws1Roundtrip() throws {
+        let d1 = SafeListeningData1(data: SafeListeningData(targetType: .TWS_L, timestamp: Int32BE(300), rtcRC: Int16BE(3), viewTime: 3, soundPressure: Int32BE(30)))
+        let original = SafeListeningNotifyStatusTws1(
+            logDataStatusLeft: .SENDING,
+            logDataStatusRight: .NOT_SENDING,
+            data: [d1]
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        // command(1) + type(1) + statusL(1) + statusR(1) + count(1) + 1*12 = 17
+        #expect(serialize(original).count == 17)
+    }
+
+    @Test func notifyStatusTws2Roundtrip() throws {
+        let d1 = SafeListeningData2(data: SafeListeningData(targetType: .TWS_L, timestamp: Int32BE(400), rtcRC: Int16BE(4), viewTime: 4, soundPressure: Int32BE(40)), ambientTime: 8)
+        let d2 = SafeListeningData2(data: SafeListeningData(targetType: .TWS_R, timestamp: Int32BE(401), rtcRC: Int16BE(5), viewTime: 5, soundPressure: Int32BE(41)), ambientTime: 9)
+        let original = SafeListeningNotifyStatusTws2(
+            logDataStatusLeft: .ERROR,
+            logDataStatusRight: .DISCONNECTED,
+            data: [d1, d2]
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(restored.data.count == 2)
+        // command(1) + type(1) + statusL(1) + statusR(1) + count(1) + 2*13 = 31
+        #expect(serialize(original).count == 31)
+    }
+
+    // MARK: NotifyParam roundtrips
+
+    @Test func notifyParamSLRoundtrip() throws {
+        let original = SafeListeningNotifyParamSL(
+            safeListeningMode: .DISABLE,
+            previewMode: .ENABLE
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(serialize(original).count == 4)
+    }
+
+    @Test func notifyParamSVCRoundtrip() throws {
+        let original = SafeListeningNotifyParamSVC(
+            volumeLimitationMode: .DISABLE,
+            safeVolumeControlMode: .ENABLE
+        )
+        let restored = try roundtrip(original)
+        #expect(restored == original)
+        #expect(serialize(original).count == 4)
+    }
 }

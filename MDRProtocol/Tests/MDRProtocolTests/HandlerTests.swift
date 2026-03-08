@@ -915,6 +915,165 @@ struct HandlerSafeListeningTests {
     }
 }
 
+// MARK: - Handler Branch Coverage
+
+@Suite("Handler: NcAsmBranches")
+struct HandlerNcAsmBranchTests {
+    @Test func asmSeamlessWithoutSupport() {
+        let (hp, mock) = makeHP() // no AMBIENT_SOUND_MODE_LEVEL_ADJUSTMENT
+        let event = injectAndPoll(hp, mock, NcAsmParamAsmSeamless(
+            command: .NCASM_RET_PARAM,
+            type: .ASM_SEAMLESS,
+            valueChangeStatus: .UNDER_CHANGING,
+            ncAsmTotalEffect: .ON,
+            ambientSoundMode: .NORMAL,
+            ambientSoundLevelValue: 10
+        ))
+        #expect(event == MDREvent.unhandled.rawValue)
+    }
+
+    @Test func ncAmbToggleWithoutSupport() {
+        let (hp, mock) = makeHP() // no AMBIENT_SOUND_CONTROL_MODE_SELECT
+        let event = injectAndPoll(hp, mock, NcAsmParamNcAmbToggle(
+            command: .NCASM_RET_PARAM,
+            type: .NC_AMB_TOGGLE,
+            function: .NC_ASM_OFF
+        ))
+        #expect(event == MDREvent.unhandled.rawValue)
+    }
+
+    @Test func unknownNcAsmType() {
+        let (hp, _) = makeHP()
+        // NC_ON_OFF (0x01) is a valid NcAsmInquiredType but not handled by any switch case
+        let result = hp.handleCommandV2T1(Data([T1Command.NCASM_RET_PARAM.rawValue, NcAsmInquiredType.NC_ON_OFF.rawValue]))
+        #expect(result == MDREvent.unhandled.rawValue)
+    }
+}
+
+@Suite("Handler: PowerBranches")
+struct HandlerPowerBranchTests {
+    @Test func autoPowerOffWithoutSupport() {
+        let (hp, mock) = makeHP() // no AUTO_POWER_OFF support
+        let event = injectAndPoll(hp, mock, PowerParamAutoPowerOff(
+            command: .POWER_RET_PARAM,
+            type: .AUTO_POWER_OFF,
+            currentPowerOffElements: .POWER_OFF_IN_30_MIN,
+            lastSelectPowerOffElements: .POWER_OFF_IN_30_MIN
+        ))
+        #expect(event == MDREvent.unhandled.rawValue)
+    }
+}
+
+@Suite("Handler: PlaybackStatusBranches")
+struct HandlerPlaybackStatusBranchTests {
+    @Test func unknownPlaybackType() {
+        let (hp, _) = makeHP()
+        // PLAY_MODE (0x40) is valid PlayInquiredType but not handled
+        let result = hp.handleCommandV2T1(Data([T1Command.PLAY_RET_STATUS.rawValue, PlayInquiredType.PLAY_MODE.rawValue]))
+        #expect(result == MDREvent.unhandled.rawValue)
+    }
+}
+
+@Suite("Handler: EqEbbBranches")
+struct HandlerEqEbbBranchTests {
+    @Test func unexpectedBandCount() {
+        let (hp, mock) = makeHP()
+        // EQ with 3 bands — not 0, 6, or 10 → falls through to unhandled
+        let event = injectAndPoll(hp, mock, EqEbbParamEq(
+            command: .EQEBB_RET_PARAM,
+            type: .PRESET_EQ,
+            presetId: .CUSTOM,
+            bands: PodArray<UInt8>([10, 11, 12])
+        ))
+        #expect(event == MDREvent.unhandled.rawValue)
+    }
+}
+
+@Suite("Handler: LogBranches")
+struct HandlerLogBranchTests {
+    @Test func logType0ShortData() {
+        let (hp, _) = makeHP()
+        // logType 0x00, data[2] is 0, but data.count < 4 → unhandled
+        let result = hp.handleCommandV2T1(Data([T1Command.LOG_NTFY_PARAM.rawValue, 0x00, 0x00]))
+        #expect(result == MDREvent.unhandled.rawValue)
+    }
+
+    @Test func logType1InteractionMessage() {
+        let (hp, _) = makeHP()
+        // logType 0x01, data.count > 4 → interaction event
+        var payload: [UInt8] = [T1Command.LOG_NTFY_PARAM.rawValue, 0x01, 0x00, 0x00]
+        payload.append(contentsOf: "hello".utf8)
+        let result = hp.handleCommandV2T1(Data(payload))
+        #expect(result == MDREvent.interaction.rawValue)
+        #expect(hp.lastInteractionMessage == "hello")
+    }
+
+    @Test func logType1TooShort() {
+        let (hp, _) = makeHP()
+        // logType 0x01, but data.count <= 4 → falls through to unhandled
+        let result = hp.handleCommandV2T1(Data([T1Command.LOG_NTFY_PARAM.rawValue, 0x01, 0x00, 0x00]))
+        #expect(result == MDREvent.unhandled.rawValue)
+    }
+
+    @Test func logTypeUnknown() {
+        let (hp, _) = makeHP()
+        // logType 0x02 → default case → unhandled
+        let result = hp.handleCommandV2T1(Data([T1Command.LOG_NTFY_PARAM.rawValue, 0x02, 0x00, 0x00]))
+        #expect(result == MDREvent.unhandled.rawValue)
+    }
+}
+
+@Suite("Handler: AlertBranches")
+struct HandlerAlertBranchTests {
+    @Test func alertWithoutSupport() {
+        let (hp, mock) = makeHP() // no FIXED_MESSAGE support
+        let event = injectAndPoll(hp, mock, AlertNotifyParamFixedMessage(
+            messageType: .DISCONNECT_CAUSED_BY_CONNECTION_MODE_CHANGE,
+            actionType: .POSITIVE_NEGATIVE
+        ))
+        #expect(event == MDREvent.unhandled.rawValue)
+    }
+
+    @Test func alertNonPositiveNegativeAction() {
+        let (hp, mock) = makeHPWithSupport([.FIXED_MESSAGE])
+        let event = injectAndPoll(hp, mock, AlertNotifyParamFixedMessage(
+            messageType: .DISCONNECT_CAUSED_BY_CONNECTION_MODE_CHANGE,
+            actionType: .CONFIRMATION_ONLY
+        ))
+        #expect(event == MDREvent.unhandled.rawValue)
+    }
+}
+
+@Suite("Handler: VoiceGuidanceBranches")
+struct HandlerVoiceGuidanceBranchTests {
+    @Test func unsupportedVoiceGuidanceType() {
+        let (hp, _) = makeHP()
+        // ONLY_ON_OFF_SETTING (0x03) is valid but not handled by any case
+        let result = hp.handleCommandV2T2(Data([T2Command.VOICE_GUIDANCE_RET_PARAM.rawValue, VoiceGuidanceInquiredType.ONLY_ON_OFF_SETTING.rawValue]))
+        #expect(result == MDREvent.unhandled.rawValue)
+    }
+}
+
+@Suite("Handler: PeripheralStatusBranches")
+struct HandlerPeripheralStatusBranchTests {
+    @Test func unsupportedPeripheralType() {
+        let (hp, _) = makeHP()
+        // SOURCE_SWITCH_CONTROL (0x01) is valid but not handled by peripheral status
+        let result = hp.handleCommandV2T2(Data([T2Command.PERI_RET_STATUS.rawValue, PeripheralInquiredType.SOURCE_SWITCH_CONTROL.rawValue]))
+        #expect(result == MDREvent.unhandled.rawValue)
+    }
+}
+
+@Suite("Handler: SafeListeningParamBranches")
+struct HandlerSafeListeningParamBranchTests {
+    @Test func safeVolumeControlTypeUnhandled() {
+        let (hp, _) = makeHP()
+        // SAFE_VOLUME_CONTROL (0x04) hits the default branch
+        let result = hp.handleCommandV2T2(Data([T2Command.SAFE_LISTENING_NTFY_PARAM.rawValue, SafeListeningInquiredType.SAFE_VOLUME_CONTROL.rawValue]))
+        #expect(result == MDREvent.unhandled.rawValue)
+    }
+}
+
 // MARK: - Edge Cases
 
 @Suite("Handler: EdgeCases")

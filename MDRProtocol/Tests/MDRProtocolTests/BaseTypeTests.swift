@@ -350,3 +350,115 @@ struct MDRArrayTests {
         #expect(restored.value[1].value == "de")
     }
 }
+
+// MARK: - MDRFixedArray Tests
+
+@Suite("MDRFixedArray")
+struct MDRFixedArrayTests {
+    @Test func roundtripWithElements() throws {
+        let original = MDRFixedArray<PrefixedString>([
+            PrefixedString("one"),
+            PrefixedString("two"),
+            PrefixedString("three"),
+        ])
+        var writer = DataWriter()
+        original.write(to: &writer)
+        // No length prefix, just 3 PrefixedStrings: (1+3)+(1+3)+(1+5) = 14
+        #expect(writer.data.count == 14)
+
+        var reader = DataReader(writer.data)
+        let restored = try MDRFixedArray<PrefixedString>.read(from: &reader, count: 3)
+        #expect(restored.value == original.value)
+        #expect(restored.fixedCount == 3)
+    }
+
+    @Test func emptyArray() throws {
+        let original = MDRFixedArray<PrefixedString>([])
+        var writer = DataWriter()
+        original.write(to: &writer)
+        #expect(writer.data.count == 0) // No length prefix, no elements
+
+        var reader = DataReader(writer.data)
+        let restored = try MDRFixedArray<PrefixedString>.read(from: &reader, count: 0)
+        #expect(restored.value.isEmpty)
+        #expect(restored.fixedCount == 0)
+    }
+
+    @Test func initWithDefaultValue() {
+        let arr = MDRFixedArray<PrefixedString>(count: 2, defaultValue: PrefixedString("x"))
+        #expect(arr.fixedCount == 2)
+        #expect(arr.value.count == 2)
+        #expect(arr.value[0].value == "x")
+        #expect(arr.value[1].value == "x")
+    }
+}
+
+// MARK: - PodArray Multi-byte Tests
+
+@Suite("PodArray Multi-byte")
+struct PodArrayMultiByteTests {
+    @Test func uint16Roundtrip() throws {
+        let original = PodArray<UInt16>([0x1234, 0xABCD, 0x0001])
+        var writer = DataWriter()
+        original.write(to: &writer)
+        // count(1) + 3*2 = 7
+        #expect(writer.data.count == 7)
+
+        var reader = DataReader(writer.data)
+        let restored = try PodArray<UInt16>.read(from: &reader)
+        #expect(restored.value == [0x1234, 0xABCD, 0x0001])
+    }
+
+    @Test func uint32Roundtrip() throws {
+        let original = PodArray<UInt32>([0x12345678, 0xDEADBEEF])
+        var writer = DataWriter()
+        original.write(to: &writer)
+        // count(1) + 2*4 = 9
+        #expect(writer.data.count == 9)
+
+        var reader = DataReader(writer.data)
+        let restored = try PodArray<UInt32>.read(from: &reader)
+        #expect(restored.value == [0x12345678, 0xDEADBEEF])
+    }
+}
+
+// MARK: - BigEndian Setter Tests
+
+@Suite("BigEndian Setters")
+struct BigEndianSetterTests {
+    @Test func int16BESetter() {
+        var v = Int16BE(0)
+        v.value = 0x0102
+        #expect(v.value == 0x0102)
+        #expect(v.byte0 == 0x01)
+        #expect(v.byte1 == 0x02)
+    }
+
+    @Test func int16BESetterNegative() {
+        var v = Int16BE(0)
+        v.value = -1
+        #expect(v.value == -1)
+        #expect(v.byte0 == 0xFF)
+        #expect(v.byte1 == 0xFF)
+    }
+
+    @Test func int24BESetter() {
+        var v = Int24BE()
+        v.value = 42
+        // Setter replicates C++ bug: low = 42 & 0xFF = 42, mid = (42>>8) & 0xFF = 0, high = 42 & 0xFF = 42
+        #expect(v.byte0 == 42)
+        #expect(v.byte1 == 0)
+        #expect(v.byte2 == 42)
+        // Value read back: 42 << 16 | 0 << 8 | 42 = 0x2A002A
+        #expect(v.value == Int32(42) << 16 | Int32(42))
+    }
+
+    @Test func int32BESetterBytes() {
+        var v = Int32BE()
+        v.value = 0x01020304
+        #expect(v.byte0 == 0x01)
+        #expect(v.byte1 == 0x02)
+        #expect(v.byte2 == 0x03)
+        #expect(v.byte3 == 0x04)
+    }
+}
