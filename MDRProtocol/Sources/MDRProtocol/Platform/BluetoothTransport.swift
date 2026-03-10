@@ -43,7 +43,13 @@ public final class BluetoothTransport: NSObject, MDRConnectionTransport, IOBluet
 
     public func send(_ data: Data) throws -> Int {
         guard let channel = rfcommChannel, case .connected = connectionState else {
-            return 0
+            if case .disconnected = connectionState {
+                throw MDRError.protocolError("Connection lost")
+            }
+            if case .error(let msg) = connectionState {
+                throw MDRError.protocolError("Connection error: \(msg)")
+            }
+            return 0 // still connecting
         }
         let result = data.withUnsafeBytes { ptr in
             channel.writeAsync(UnsafeMutableRawPointer(mutating: ptr.baseAddress!),
@@ -58,6 +64,13 @@ public final class BluetoothTransport: NSObject, MDRConnectionTransport, IOBluet
     public func receive(maxLength: Int) throws -> Data {
         lock.lock()
         defer { lock.unlock() }
+
+        if case .disconnected = connectionState {
+            throw MDRError.protocolError("Connection lost")
+        }
+        if case .error(let msg) = connectionState {
+            throw MDRError.protocolError("Connection error: \(msg)")
+        }
 
         guard !buffer.isEmpty else { return Data() }
         let len = min(maxLength, buffer.count)

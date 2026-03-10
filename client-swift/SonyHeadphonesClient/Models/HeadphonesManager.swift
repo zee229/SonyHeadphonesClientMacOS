@@ -351,6 +351,9 @@ final class HeadphonesManager: ObservableObject {
     private func pollConnected() {
         guard let hp = headphones else { return }
 
+        // Tick runloop so IOBluetooth delegate callbacks (e.g. rfcommChannelClosed) fire
+        transport.poll(timeoutMS: 0)
+
         let event = hp.pollEvents()
 
         if let mdrEvent = MDREvent(rawValue: event) {

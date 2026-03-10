@@ -32,18 +32,20 @@ struct BluetoothTransportTests {
         #expect(transport.lastError == "")
     }
 
-    @Test("Send returns 0 when not connected")
-    func sendWhenDisconnected() throws {
+    @Test("Send throws when disconnected")
+    func sendWhenDisconnected() {
         let transport = BluetoothTransport()
-        let sent = try transport.send(Data([0x01, 0x02]))
-        #expect(sent == 0)
+        #expect(throws: MDRError.self) {
+            try transport.send(Data([0x01, 0x02]))
+        }
     }
 
-    @Test("Receive returns empty when not connected")
-    func receiveWhenDisconnected() throws {
+    @Test("Receive throws when disconnected")
+    func receiveWhenDisconnected() {
         let transport = BluetoothTransport()
-        let data = try transport.receive(maxLength: 1024)
-        #expect(data.isEmpty)
+        #expect(throws: MDRError.self) {
+            try transport.receive(maxLength: 1024)
+        }
     }
 
     // MARK: - Connect Error Cases
