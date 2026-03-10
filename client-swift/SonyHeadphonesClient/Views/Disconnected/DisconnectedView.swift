@@ -29,13 +29,23 @@ struct DisconnectedView: View {
                 .padding(.horizontal)
             }
 
-            Button {
-                manager.disconnect()
-            } label: {
-                Label("Reconnect", systemImage: "link")
-                    .frame(maxWidth: .infinity)
+            VStack(spacing: 10) {
+                Button {
+                    manager.reconnectToLastDevice()
+                } label: {
+                    Label("Reconnect", systemImage: "arrow.triangle.2.circlepath")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button {
+                    manager.disconnect()
+                } label: {
+                    Label("Back to Devices", systemImage: "list.bullet")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
             }
-            .buttonStyle(.borderedProminent)
             .padding(.horizontal, 40)
 
             Spacer()

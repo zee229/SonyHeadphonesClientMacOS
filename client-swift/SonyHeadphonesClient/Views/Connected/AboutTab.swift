@@ -59,6 +59,7 @@ struct AppSettingsView: View {
 
     @AppStorage("appTheme") private var appTheme: Int = 0
     @AppStorage("alwaysOnTop") private var alwaysOnTop: Bool = false
+    @AppStorage("autoReconnect") private var autoReconnect: Bool = true
     @AppStorage("menuBarEnabled") private var menuBarEnabled: Bool = true
     @AppStorage("menuBarIconStyle") private var menuBarIconStyle: Int = 1
     @AppStorage("menuBarShowBatterySection") private var showBattery: Bool = true
@@ -151,6 +152,21 @@ struct AppSettingsView: View {
                             .foregroundColor(.secondary)
                         Spacer()
                     }
+                }
+
+                Divider()
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Auto-Reconnect")
+                            .font(.subheadline)
+                        Text("Automatically reconnect when connection drops")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Toggle("", isOn: $autoReconnect)
+                        .labelsHidden()
                 }
             }
 

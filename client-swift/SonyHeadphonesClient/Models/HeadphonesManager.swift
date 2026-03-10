@@ -266,6 +266,22 @@ final class HeadphonesManager: ObservableObject {
         refreshDevices()
     }
 
+    func reconnectToLastDevice() {
+        guard !connectedDeviceMac.isEmpty else {
+            disconnect()
+            return
+        }
+        refreshDevices()
+        for (i, _) in devices.enumerated() {
+            if deviceMac(at: i) == connectedDeviceMac {
+                selectedDeviceIndex = i
+                connect(deviceIndex: i)
+                return
+            }
+        }
+        disconnect()
+    }
+
     func cancelReconnect() {
         performFullCleanup()
         let action = reconnectStateMachine.cancel()
@@ -440,6 +456,10 @@ final class HeadphonesManager: ObservableObject {
         writeDisconnectedSnapshot()
     }
 
+    private var autoReconnectEnabled: Bool {
+        UserDefaults.standard.object(forKey: "autoReconnect") as? Bool ?? true
+    }
+
     private func handleUnexpectedDisconnect(error: String) {
         let deviceMac = connectedDeviceMac
         let deviceName = modelName.isEmpty ? (rememberedDeviceName ?? "") : modelName
@@ -452,7 +472,7 @@ final class HeadphonesManager: ObservableObject {
             return
         }
 
-        if ReconnectStateMachine.shouldReconnect(deviceMac: deviceMac, isManualDisconnect: false) {
+        if autoReconnectEnabled && ReconnectStateMachine.shouldReconnect(deviceMac: deviceMac, isManualDisconnect: false) {
             let action = reconnectStateMachine.handleDisconnect(deviceMac: deviceMac, deviceName: deviceName)
             applyAction(action)
         } else {
