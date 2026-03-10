@@ -7,6 +7,7 @@ struct MenuBarPopoverView: View {
     @AppStorage("menuBarShowNCSection") private var showNC: Bool = true
     @AppStorage("menuBarShowPlaybackSection") private var showPlayback: Bool = true
     @AppStorage("menuBarShowVolumeControl") private var showVolume: Bool = true
+    @AppStorage("menuBarShowDevicesSection") private var showDevices: Bool = false
 
     private var trackTitle: String {
         !manager.playTrackTitle.isEmpty ? manager.playTrackTitle : nowPlaying.title
@@ -83,9 +84,15 @@ struct MenuBarPopoverView: View {
             ncSection
         }
 
+        // Devices
+        if showDevices && !manager.pairedDevices.isEmpty {
+            if showBattery || showNC { Divider().padding(.vertical, 4) }
+            devicesSection
+        }
+
         // Playback
         if showPlayback {
-            if showBattery || showNC { Divider().padding(.vertical, 4) }
+            if showBattery || showNC || (showDevices && !manager.pairedDevices.isEmpty) { Divider().padding(.vertical, 4) }
             playbackSection
         }
     }
@@ -315,6 +322,24 @@ struct MenuBarPopoverView: View {
         .padding(.vertical, 4)
     }
 
+    // MARK: - Devices (Multipoint)
+
+    @ViewBuilder
+    private var devicesSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(manager.pairedDevices) { device in
+                MenuBarDeviceRow(
+                    device: device,
+                    isMultipoint: device.id == manager.multipointDeviceMac,
+                    onConnect: !device.connected ? { manager.connectPairedDevice(device.id) } : nil,
+                    onDisconnect: device.connected ? { manager.disconnectPairedDevice(device.id) } : nil,
+                    onSetMultipoint: device.connected ? { manager.setMultipointDeviceMac(device.id) } : nil
+                )
+            }
+        }
+        .padding(.horizontal, 12)
+    }
+
     // MARK: - Disconnected
 
     @ViewBuilder
@@ -339,6 +364,17 @@ struct MenuBarPopoverView: View {
                 Text("Not Connected")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
+
+                if manager.rememberedDeviceMac != nil {
+                    Button {
+                        manager.reconnectToLastDevice()
+                    } label: {
+                        Label("Connect", systemImage: "link")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                }
             }
         }
         .frame(maxWidth: .infinity)
@@ -456,6 +492,102 @@ struct MenuBarModePill: View {
             )
         }
         .buttonStyle(.plain)
+    }
+}
+
+struct MenuBarDeviceRow: View {
+    let device: PairedDevice
+    let isMultipoint: Bool
+    let onConnect: (() -> Void)?
+    let onDisconnect: (() -> Void)?
+    let onSetMultipoint: (() -> Void)?
+
+    @State private var pending = false
+
+    private var icon: String {
+        let lower = device.name.lowercased()
+        if lower.contains("iphone") { return "iphone" }
+        if lower.contains("ipad") { return "ipad" }
+        if lower.contains("macbook") { return "laptopcomputer" }
+        if lower.contains("mac") { return "desktopcomputer" }
+        if lower.contains("watch") { return "applewatch" }
+        if lower.contains("tv") { return "appletv" }
+        return "desktopcomputer"
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.caption)
+                .foregroundColor(device.connected ? .accentColor : .secondary)
+                .frame(width: 16)
+
+            Text(device.name)
+                .font(.caption)
+                .lineLimit(1)
+
+            if device.connected {
+                Circle()
+                    .fill(Color.green)
+                    .frame(width: 5, height: 5)
+            }
+
+            if isMultipoint {
+                Text("Audio")
+                    .font(.system(size: 8))
+                    .fontWeight(.medium)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(Color.accentColor.opacity(0.2))
+                    .foregroundColor(.accentColor)
+                    .cornerRadius(3)
+            }
+
+            Spacer()
+
+            if pending {
+                ProgressView()
+                    .controlSize(.mini)
+            } else if let onSetMultipoint, !isMultipoint {
+                Button(action: onSetMultipoint) {
+                    Image(systemName: "speaker.wave.2")
+                        .font(.system(size: 9))
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(.secondary)
+                .help("Set as audio device")
+            }
+
+            if !pending {
+                if let onConnect {
+                    Button {
+                        pending = true
+                        onConnect()
+                    } label: {
+                        Image(systemName: "link")
+                            .font(.system(size: 9))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.accentColor)
+                    .help("Connect")
+                } else if let onDisconnect {
+                    Button {
+                        pending = true
+                        onDisconnect()
+                    } label: {
+                        Image(systemName: "link.badge.plus")
+                            .font(.system(size: 9))
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.secondary)
+                    .help("Disconnect")
+                }
+            }
+        }
+        .padding(.vertical, 3)
+        .onChange(of: device.connected) { _, _ in
+            pending = false
+        }
     }
 }
 

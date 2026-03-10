@@ -64,6 +64,7 @@ struct AppSettingsView: View {
     @AppStorage("menuBarIconStyle") private var menuBarIconStyle: Int = 1
     @AppStorage("menuBarShowBatterySection") private var showBattery: Bool = true
     @AppStorage("menuBarShowNCSection") private var showNC: Bool = true
+    @AppStorage("menuBarShowDevicesSection") private var showDevices: Bool = false
     @AppStorage("menuBarShowPlaybackSection") private var showPlayback: Bool = true
     @AppStorage("menuBarShowVolumeControl") private var showVolume: Bool = true
 
@@ -214,6 +215,14 @@ struct AppSettingsView: View {
                             .font(.subheadline)
                         Spacer()
                         Toggle("", isOn: $showNC)
+                            .labelsHidden()
+                    }
+
+                    HStack {
+                        Text("Devices")
+                            .font(.subheadline)
+                        Spacer()
+                        Toggle("", isOn: $showDevices)
                             .labelsHidden()
                     }
 
