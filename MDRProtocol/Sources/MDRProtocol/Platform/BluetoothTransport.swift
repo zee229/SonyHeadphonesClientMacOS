@@ -38,6 +38,8 @@ public final class BluetoothTransport: NSObject, MDRConnectionTransport, IOBluet
     private var rfcommChannel: IOBluetoothRFCOMMChannel?
     private var buffer = Data()
     private let lock = NSLock()
+    private var connectStartTime: Date?
+    private static let connectTimeout: TimeInterval = 15
 
     // MARK: - MDRTransport
 
@@ -89,8 +91,13 @@ public final class BluetoothTransport: NSObject, MDRConnectionTransport, IOBluet
     /// Connect to a device by MAC address and service UUID.
     /// This is asynchronous — call `poll()` to drive the connection.
     public func connect(macAddress: String, serviceUUID: String) {
+        // Clean up any previous channel to avoid stale callbacks
+        rfcommChannel?.close()
+        rfcommChannel = nil
+
         connectionState = .connecting
         lastError = ""
+        connectStartTime = Date()
 
         guard let device = IOBluetoothDevice(addressString: macAddress) else {
             lastError = "Device not found (not paired?)"
@@ -135,6 +142,7 @@ public final class BluetoothTransport: NSObject, MDRConnectionTransport, IOBluet
         rfcommChannel?.close()
         rfcommChannel = nil
         connectionState = .disconnected
+        connectStartTime = nil
     }
 
     // MARK: - Poll
@@ -147,6 +155,18 @@ public final class BluetoothTransport: NSObject, MDRConnectionTransport, IOBluet
         if seconds <= 0 { seconds = 0.0001 }
         let limitDate = Date(timeIntervalSinceNow: seconds)
         RunLoop.current.run(mode: .default, before: limitDate)
+
+        // Timeout stale connecting state
+        if case .connecting = connectionState,
+           let start = connectStartTime,
+           Date().timeIntervalSince(start) > Self.connectTimeout {
+            lastError = "Connection timed out"
+            connectionState = .error(lastError)
+            rfcommChannel?.close()
+            rfcommChannel = nil
+            connectStartTime = nil
+        }
+
         return connectionState
     }
 
@@ -171,17 +191,21 @@ public final class BluetoothTransport: NSObject, MDRConnectionTransport, IOBluet
     // MARK: - IOBluetoothRFCOMMChannelDelegate
 
     public func rfcommChannelOpenComplete(_ rfcommChannel: IOBluetoothRFCOMMChannel!, status error: IOReturn) {
+        guard rfcommChannel === self.rfcommChannel else { return }
         if error != kIOReturnSuccess {
             lastError = "Connection handshake failed: 0x\(String(error, radix: 16))"
             connectionState = .error(lastError)
             self.rfcommChannel = nil
+            connectStartTime = nil
             return
         }
         connectionState = .connected
+        connectStartTime = nil
     }
 
     public func rfcommChannelData(_ rfcommChannel: IOBluetoothRFCOMMChannel!,
                                    data dataPointer: UnsafeMutableRawPointer!, length dataLength: Int) {
+        guard rfcommChannel === self.rfcommChannel else { return }
         let data = Data(bytes: dataPointer, count: dataLength)
         lock.lock()
         buffer.append(data)
@@ -189,6 +213,7 @@ public final class BluetoothTransport: NSObject, MDRConnectionTransport, IOBluet
     }
 
     public func rfcommChannelClosed(_ rfcommChannel: IOBluetoothRFCOMMChannel!) {
+        guard rfcommChannel === self.rfcommChannel else { return }
         if lastError.isEmpty {
             lastError = "Connection closed by remote"
         }
