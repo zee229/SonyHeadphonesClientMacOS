@@ -333,7 +333,7 @@ struct MenuBarPopoverView: View {
                         .foregroundColor(.secondary)
                 }
             } else {
-                Image(systemName: "headphones")
+                Image(systemName: "headphones.slash")
                     .font(.system(size: 28, weight: .thin))
                     .foregroundColor(.secondary)
                 Text("Not Connected")

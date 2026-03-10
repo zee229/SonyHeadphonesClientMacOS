@@ -113,10 +113,14 @@ struct MenuBarLabel: View {
         return "\(min.level)%"
     }
 
+    private var isConnected: Bool {
+        manager.connectionState == .connected
+    }
+
     var body: some View {
         HStack(spacing: 2) {
             if iconStyle != 2 {
-                Image(systemName: "headphones")
+                Image(systemName: isConnected ? "headphones" : "headphones.slash")
             }
             if iconStyle != 0, let text = batteryText {
                 Text(text)
