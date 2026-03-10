@@ -136,6 +136,29 @@ final class HeadphonesManager: ObservableObject {
     private var isPollingSuppressed = false
     private var lastSnapshotWrite: Date = .distantPast
 
+    // MARK: - MediaRemote (system Now Playing)
+    private var mrTitle: String = ""
+    private var mrArtist: String = ""
+    private var mrAlbum: String = ""
+    private var mrIsPlaying: Bool = false
+    private var lastMediaRemoteQuery: Date = .distantPast
+
+    private static let mrBundle: CFBundle? = CFBundleCreate(kCFAllocatorDefault,
+        NSURL(fileURLWithPath: "/System/Library/PrivateFrameworks/MediaRemote.framework"))
+
+    private typealias MRGetInfoFn = @convention(c) (DispatchQueue, @escaping ([String: Any]) -> Void) -> Void
+    private typealias MRGetClientFn = @convention(c) (DispatchQueue, @escaping (AnyObject?) -> Void) -> Void
+
+    private static let mrGetInfo: MRGetInfoFn? = {
+        guard let b = mrBundle, let p = CFBundleGetFunctionPointerForName(b, "MRMediaRemoteGetNowPlayingInfo" as CFString) else { return nil }
+        return unsafeBitCast(p, to: MRGetInfoFn.self)
+    }()
+
+    private static let mrGetClient: MRGetClientFn? = {
+        guard let b = mrBundle, let p = CFBundleGetFunctionPointerForName(b, "MRMediaRemoteGetNowPlayingClient" as CFString) else { return nil }
+        return unsafeBitCast(p, to: MRGetClientFn.self)
+    }()
+
     // Reconnect
     private var reconnectTimer: AnyCancellable?
     private(set) var reconnectStateMachine = ReconnectStateMachine()
@@ -373,7 +396,26 @@ final class HeadphonesManager: ObservableObject {
             }
         }
 
+        queryMediaRemote()
         readAllFields()
+    }
+
+    private func queryMediaRemote() {
+        let now = Date()
+        guard now.timeIntervalSince(lastMediaRemoteQuery) >= 2.0 else { return }
+        lastMediaRemoteQuery = now
+
+        Self.mrGetInfo?(DispatchQueue.main) { [weak self] info in
+            guard let self else { return }
+            let title = info["kMRMediaRemoteNowPlayingInfoTitle"] as? String ?? ""
+            let artist = info["kMRMediaRemoteNowPlayingInfoArtist"] as? String ?? ""
+            let album = info["kMRMediaRemoteNowPlayingInfoAlbum"] as? String ?? ""
+            let rate = info["kMRMediaRemoteNowPlayingInfoPlaybackRate"] as? Double ?? 0
+            self.mrTitle = title
+            self.mrArtist = artist
+            self.mrAlbum = album
+            self.mrIsPlaying = rate > 0
+        }
     }
 
     // MARK: - Cleanup & Reconnect
@@ -524,13 +566,14 @@ final class HeadphonesManager: ObservableObject {
         let newBattCase = BatteryInfo(level: hp.batteryCase.level, threshold: hp.batteryCase.threshold, charging: BatteryChargingStatus(rawValue: hp.batteryCase.charging.rawValue) ?? .notCharging)
         if batteryCase != newBattCase { batteryCase = newBattCase }
 
-        // Playback metadata
-        let newTitle = hp.playTrackTitle
+        // Playback metadata — prefer MediaRemote when actively playing (AVRCP can be stale)
+        let useMediaRemote = mrIsPlaying && !mrTitle.isEmpty
+        let newTitle = useMediaRemote ? mrTitle : hp.playTrackTitle
         if playTrackTitle != newTitle { playTrackTitle = newTitle }
-        let newAlbum = hp.playTrackAlbum
-        if playTrackAlbum != newAlbum { playTrackAlbum = newAlbum }
-        let newArtist = hp.playTrackArtist
+        let newArtist = useMediaRemote ? mrArtist : hp.playTrackArtist
         if playTrackArtist != newArtist { playTrackArtist = newArtist }
+        let newAlbum = useMediaRemote ? mrAlbum : hp.playTrackAlbum
+        if playTrackAlbum != newAlbum { playTrackAlbum = newAlbum }
         let newPlayPause = PlaybackStatus(rawValue: hp.playPause.rawValue) ?? .unsettled
         if playPause != newPlayPause { playPause = newPlayPause }
 
