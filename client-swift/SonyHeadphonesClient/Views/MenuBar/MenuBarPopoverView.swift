@@ -2,7 +2,7 @@ import SwiftUI
 
 struct MenuBarPopoverView: View {
     @EnvironmentObject var manager: HeadphonesManager
-    @StateObject private var nowPlaying = NowPlayingMonitor()
+    @ObservedObject private var nowPlaying = NowPlayingService.shared
     @AppStorage("menuBarShowBatterySection") private var showBattery: Bool = true
     @AppStorage("menuBarShowNCSection") private var showNC: Bool = true
     @AppStorage("menuBarShowPlaybackSection") private var showPlayback: Bool = true
@@ -37,10 +37,10 @@ struct MenuBarPopoverView: View {
             footerButtons
         }
         .frame(width: 300)
-        .onAppear { if isConnected { nowPlaying.start() } }
-        .onDisappear { nowPlaying.stop() }
+        .onAppear { if isConnected { NowPlayingService.shared.start() } }
+        .onDisappear { NowPlayingService.shared.stop() }
         .onChange(of: isConnected) { _, connected in
-            if connected { nowPlaying.start() } else { nowPlaying.stop() }
+            if connected { NowPlayingService.shared.start() } else { NowPlayingService.shared.stop() }
         }
     }
 
@@ -214,12 +214,12 @@ struct MenuBarPopoverView: View {
     // MARK: - Playback
 
     private var useAppleScriptControls: Bool {
-        manager.playTrackTitle.isEmpty && nowPlaying.selectedSource != nil
+        manager.playTrackTitle.isEmpty && nowPlaying.activeSource != nil
     }
 
     private var menuBarIsPlaying: Bool {
         if useAppleScriptControls {
-            return nowPlaying.selectedSource?.isPlaying ?? false
+            return nowPlaying.isPlaying
         }
         return manager.playPause == .play
     }
@@ -244,23 +244,10 @@ struct MenuBarPopoverView: View {
                 }
             }
 
-            if nowPlaying.hasMultipleSources {
-                HStack(spacing: 4) {
-                    ForEach(nowPlaying.sources) { src in
-                        MenuBarSourcePill(
-                            source: src,
-                            isSelected: nowPlaying.selectedSourceId == src.id
-                        ) {
-                            nowPlaying.selectedSourceId = src.id
-                        }
-                    }
-                }
-            }
-
             HStack(spacing: 16) {
                 Button {
-                    if useAppleScriptControls, let id = nowPlaying.selectedSourceId {
-                        nowPlaying.sendPreviousTrack(for: id)
+                    if useAppleScriptControls {
+                        nowPlaying.sendPreviousTrack()
                     } else {
                         manager.sendPlaybackControl(.trackDown)
                     }
@@ -270,8 +257,8 @@ struct MenuBarPopoverView: View {
                 .buttonStyle(.plain)
 
                 Button {
-                    if useAppleScriptControls, let id = nowPlaying.selectedSourceId {
-                        nowPlaying.sendPlayPause(for: id)
+                    if useAppleScriptControls {
+                        nowPlaying.sendPlayPause()
                     } else if manager.playPause == .play {
                         manager.sendPlaybackControl(.pause)
                     } else {
@@ -285,8 +272,8 @@ struct MenuBarPopoverView: View {
                 .foregroundColor(.accentColor)
 
                 Button {
-                    if useAppleScriptControls, let id = nowPlaying.selectedSourceId {
-                        nowPlaying.sendNextTrack(for: id)
+                    if useAppleScriptControls {
+                        nowPlaying.sendNextTrack()
                     } else {
                         manager.sendPlaybackControl(.trackUp)
                     }
@@ -591,35 +578,3 @@ struct MenuBarDeviceRow: View {
     }
 }
 
-struct MenuBarSourcePill: View {
-    let source: MediaSource
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 3) {
-                Image(systemName: source.sfSymbol)
-                    .font(.system(size: 9))
-                Text(source.displayName)
-                    .font(.caption2)
-                if source.isPlaying {
-                    Circle()
-                        .fill(Color.green)
-                        .frame(width: 5, height: 5)
-                }
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .frame(maxWidth: .infinity)
-            .background(isSelected ? Color.accentColor.opacity(0.2) : Color(.controlBackgroundColor))
-            .foregroundColor(isSelected ? .accentColor : .secondary)
-            .cornerRadius(6)
-            .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(isSelected ? Color.accentColor.opacity(0.5) : Color(.separatorColor), lineWidth: 0.5)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-}

@@ -49,8 +49,9 @@ swift test --package-path MDRProtocol
   - `Models/DeviceState.swift` — Swift value types for connection/battery/device state
   - `Models/HeadphonesSnapshot.swift` — `Codable` snapshot struct for widget data sharing via `UserDefaults(suiteName:)`
   - `Views/` — SwiftUI views organized by connection state (Discovery, Connecting, Connected, Disconnected). About tab doubles as app settings (theme, window, permissions).
-  - `Views/Connected/PlaybackTab.swift` — Playback tab with `NowPlayingMonitor` (multi-source AppleScript polling), `MediaSource` model, `SourcePill` view, and smart routing (AppleScript for app-targeted controls, AVRCP fallback). `AudioVisualizerView` animated bars.
-  - `Views/MenuBar/MenuBarPopoverView.swift` — Menu bar popover: battery, NC controls, playback with multi-source pills (`MenuBarSourcePill`), volume. Uses `MenuBarExtra` scene with `.window` style.
+  - `Models/NowPlayingService.swift` — Shared singleton (`NowPlayingService.shared`) for AppleScript-based now-playing detection (Spotify, Apple Music). Contains `MediaSource` model. Ref-counted start/stop, 2s polling. Replaces broken MediaRemote framework (blocked on macOS 15.4+).
+  - `Views/Connected/PlaybackTab.swift` — Playback tab using `NowPlayingService.shared` for metadata with AVRCP fallback. `AudioVisualizerView` animated bars, `PlayButtonModifier`.
+  - `Views/MenuBar/MenuBarPopoverView.swift` — Menu bar popover: battery, NC controls, playback via `NowPlayingService.shared`, volume. Uses `MenuBarExtra` scene with `.window` style.
   - `Resources/Info.plist` — Bundle config (name: "Sony Headphones", icon, Bluetooth usage). Contains `$(EXECUTABLE_NAME)` / `$(PRODUCT_BUNDLE_IDENTIFIER)` Xcode variables resolved by `build_app.sh` at build time.
   - `Resources/AppIcon.icns` — App icon for CLI builds (all sizes 16-512@2x)
   - `Resources/Assets.xcassets/AppIcon.appiconset/` — App icon for Xcode builds
